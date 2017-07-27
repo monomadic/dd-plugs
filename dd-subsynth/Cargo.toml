@@ -1,0 +1,15 @@
+[package]
+name = "dd_simplesynth"
+version = "0.1.0"
+authors = ["Rob Saunders <rob@wearebrandnew.com>"]
+
+[dependencies]
+vst2 = { git = "https://github.com/overdrivenpotato/rust-vst2" }
+log = "0.3"
+simplelog = "0.4.2"
+time = "0.1"
+dd_dsp = { path = "../dd-dsp" }
+
+[lib]
+name = "dd_simplesynth"
+crate-type = ["cdylib"]

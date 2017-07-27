@@ -1,6 +1,2 @@
-[package]
-name = "dd-plugs"
-version = "0.1.0"
-authors = ["Rob Saunders <rob@wearebrandnew.com>"]
-
-[dependencies]
+[workspace]
+members = ["dd-subsynth"]
