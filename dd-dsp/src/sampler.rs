@@ -1,11 +1,4 @@
-//! Sample playback.
-
-// use simplelog::*;
-
-use std::fs::File;
-use std::io::BufReader;
 use std::i16;
-
 use hound;
 
 #[derive(Clone)]
@@ -17,14 +10,10 @@ pub struct Sampler {
 
 impl Sampler {
     pub fn new(sample_rate: f64) -> Result<Sampler, String> {
+        const SOUNDFILE: &'static [u8] = include_bytes!("../../dd-sampler/assets/snare.wav");
+        let wr = hound::WavReader::new(SOUNDFILE);
 
-        // let _ = CombinedLogger::init(
-        //     vec![
-        //         WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-        //     ]
-        // );
-
-        match hound::WavReader::open("/Users/rob/snare.wav") {
+        match wr {
             Err(why) => {
                 Result::Err(why.to_string())
             },
