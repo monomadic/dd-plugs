@@ -12,7 +12,8 @@ plugins=$(find target/release/*.dylib -type f -exec basename {} \;)
 
 for plugin in $plugins; do
     DYLIB_FILE="target/release/$plugin"
-    VST_NAME=${plugin%.dylib}
+    TMP_VST_NAME=${plugin%.dylib}
+    VST_NAME=${TMP_VST_NAME#lib}
 
     TARGET="$INSTALL_DIR$VST_NAME.vst"
 
