@@ -3,6 +3,7 @@ A set of minimalist VST plugins written in rust.
 
 - **dd-subsynth** a polyphonic subtractive synth, good for sub basses at the moment.
 - **dd-overdrive** a very simple overdrive / distortion.
+- **dd-sampler** a simple sample playback plugin.
 
 At the moment, these plugins are gui-less (though I'm building a vst gui lib to write gui based plugins which may end up here in future).
 
