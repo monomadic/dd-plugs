@@ -4,12 +4,6 @@ extern crate vst2;
 extern crate log;
 extern crate simplelog;
 
-extern crate objc;
-
-extern crate libc;
-
-extern crate cocoa;
-
 use simplelog::*;
 use std::fs::File;
 
@@ -167,7 +161,6 @@ impl SimpleSynth {
 }
 
 impl Plugin for SimpleSynth {
-
     fn get_info(&self) -> Info {
         Info {
             name: "DD-SimpleSynth".to_string(),
@@ -182,10 +175,6 @@ impl Plugin for SimpleSynth {
         }
     }
 
-    fn get_editor(&mut self) -> Option<&mut Editor> {
-        None
-    }
-
     fn process_events(&mut self, events: Vec<Event>) {
         for event in events {
             match event {
@@ -197,7 +186,6 @@ impl Plugin for SimpleSynth {
     }
 
     fn process(&mut self, buffer: AudioBuffer<f32>) {
-
         let (_, output_buffer) = buffer.split();
 
         for output_channel in output_buffer {
@@ -262,6 +250,7 @@ impl Plugin for SimpleSynth {
             _ => "".to_string(),
         }
     }
+    fn get_editor(&mut self) -> Option<&mut Editor> { None }
 }
 
 plugin_main!(SimpleSynth);
