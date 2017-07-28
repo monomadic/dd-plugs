@@ -1,5 +1,5 @@
 [package]
-name = "dd_simplesynth"
+name = "dd_subsynth"
 version = "0.1.0"
 authors = ["Rob Saunders <rob@wearebrandnew.com>"]
 
@@ -11,5 +11,5 @@ time = "0.1"
 dd_dsp = { path = "../dd-dsp" }
 
 [lib]
-name = "dd_simplesynth"
+name = "dd_subsynth"
 crate-type = ["cdylib"]
