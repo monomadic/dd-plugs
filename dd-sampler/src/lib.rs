@@ -4,7 +4,6 @@ extern crate vst2;
 extern crate log;
 extern crate simplelog;
 
-#[macro_use]
 extern crate objc;
 
 extern crate libc;
@@ -17,24 +16,21 @@ use std::fs::File;
 use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
 use vst2::event::{Event};
-use vst2::editor::{Editor};
+use vst2::editor::Editor;
 
 use std::collections::HashMap;
 
-extern crate dd_core;
-use dd_core::envelope::{Envelope, State};
-use dd_core::oscillator::{SineOsc};
-use dd_core::midi;
-use dd_core::sampler::{Sampler};
-
-mod gui;
-use gui::{Interface};
+extern crate dd_dsp;
+use dd_dsp::*;
+use dd_dsp::{ Envelope, State };
+use dd_dsp::oscillator::{ SineOsc };
+use dd_dsp::sampler::{ Sampler };
 
 /// Size of VST params.
 type Param = f32;
 
 /// Size of samples.
-type Sample = f64;
+// type Sample = f64;
 
 /// Counts of samples.
 // type SampleCount = u64;
@@ -43,8 +39,6 @@ type Sample = f64;
 type SampleTiming = u64;
 
 struct SimpleSynth {
-    editor: Interface,
-
     sample_rate: f64,
     attack_time: Param,
     release_time: Param,
@@ -83,7 +77,6 @@ impl Default for SimpleSynth {
             attack_ratio: 0.0,
             release_ratio: 0.0001,
             voices: HashMap::new(),
-            editor: Interface::new(),
         }
     }
 }
@@ -190,7 +183,7 @@ impl Plugin for SimpleSynth {
     }
 
     fn get_editor(&mut self) -> Option<&mut Editor> {
-        Some(&mut self.editor)
+        None
     }
 
     fn process_events(&mut self, events: Vec<Event>) {

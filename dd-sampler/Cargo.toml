@@ -11,7 +11,7 @@ time = "0.1"
 libc = "*"
 objc = "0.2"
 cocoa = "0.8.1"
-dd_core = { path = "../dd_core" }
+dd_dsp = { path = "../dd-dsp" }
 
 [lib]
 name = "dd_sampler"
