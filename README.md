@@ -17,8 +17,8 @@ cargo build --release --all
 
 On MacOS, you will need to package these up. A provided script will help you here.
 ```shell
-chmod 777 ./build.sh
-./build.sh
+chmod 777 ./contrib/mac-install.sh
+./contrib/mac-install.sh
 ```
 
 Alternatively I may release binary versions in the future.

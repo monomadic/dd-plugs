@@ -1,0 +1,18 @@
+[package]
+name = "dd_sampler"
+version = "0.1.0"
+authors = ["Rob Saunders <rob@wearebrandnew.com>"]
+
+[dependencies]
+vst2 = { git = "https://github.com/overdrivenpotato/rust-vst2" }
+log = "0.3"
+simplelog = "0.4.2"
+time = "0.1"
+libc = "*"
+objc = "0.2"
+cocoa = "0.8.1"
+dd_core = { path = "../dd_core" }
+
+[lib]
+name = "dd_sampler"
+crate-type = ["cdylib"]
