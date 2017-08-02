@@ -6,9 +6,9 @@ authors = ["Rob Saunders <rob@wearebrandnew.com>"]
 [dependencies]
 vst2 = { git = "https://github.com/overdrivenpotato/rust-vst2" }
 log = "0.3"
-simplelog = "0.4.2"
 time = "0.1"
 hound = "3.1.0"
+basic_dsp="0.5"
 
 [lib]
 name = "dd_dsp"

@@ -20,6 +20,8 @@ use dd_dsp::{ Envelope, State };
 use dd_dsp::oscillator::{ SineOsc };
 use dd_dsp::sampler::{ Sampler };
 
+extern crate log_panics;
+
 /// Size of VST params.
 type Param = f32;
 
@@ -57,13 +59,6 @@ struct Voice {
 
 impl Default for SimpleSynth {
     fn default() -> SimpleSynth {
-        let _ = CombinedLogger::init(
-            vec![
-                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
-                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-            ]
-        );
-
         SimpleSynth {
             sample_rate: 0.0,
             attack_time: 0.0,
@@ -128,8 +123,16 @@ impl SimpleSynth {
         else {
             // Create a new voice.
             info!("creating voice {}", note);
+            use log_panics;
+            log_panics::init();
+            let _ = CombinedLogger::init(
+                vec![
+                    // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
+                    WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
+                ]
+            );
 
-            match Sampler::new(self.sample_rate) {
+            match Sampler::new(self.sample_rate, midi_note_to_hz(note)) {
                 Err(why) => { info!("wav error: {:?}", why)},
                 Ok(sampler) => {
                     let voice = Voice {
