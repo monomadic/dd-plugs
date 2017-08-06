@@ -26,9 +26,9 @@ impl Voice {
 #[derive(Debug)]
 pub struct PlayingVoice {
     // time_of_note_on: std::time::Instant,
-    samples_since_start: u64,
-    gain: f64,
-    freq: f64,
+    pub samples_since_start: u64,
+    pub gain: f64,
+    pub freq: f64,
     // vel: u8,
 }
 

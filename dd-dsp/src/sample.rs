@@ -3,8 +3,8 @@ use std::io::{BufReader, Read};
 
 #[derive(Clone)]
 pub struct SampleFile {
-    sample_rate: f64,
-    unity_pitch: f64,
+    pub sample_rate: f64,
+    pub unity_pitch: f64,
     pub samples: Vec<i16>,
 }
 
@@ -24,7 +24,7 @@ impl SampleFile {
 
             Ok(SampleFile {
                 sample_rate: reader.spec().sample_rate as f64,
-                unity_pitch: 0.0,
+                unity_pitch: 440.0,
                 samples: samples,
             })
     }

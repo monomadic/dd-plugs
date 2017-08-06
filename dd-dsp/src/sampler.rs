@@ -100,13 +100,31 @@ impl Sampler {
     }
 
     pub fn note_on(&mut self, note: MidiNote) { self.voice_manager.note_on(note) }
+    pub fn note_off(&mut self, note: MidiNote) { self.voice_manager.note_off(note) }
+
+    pub fn sample_at(&mut self, pos: usize, freq: f64) -> f64 {
+        let unity_freq = self.sample_file.unity_pitch;
+        let scale_factor = freq / unity_freq;
+
+        let new_samplerate_ratio = self.sample_file.sample_rate / 10000.0 * scale_factor;
+        let new_pos = ((pos as f64) * new_samplerate_ratio) as usize;
+
+        if self.sample_file.samples.len() > new_pos {
+            self.sample_file.samples[new_pos] as f64
+        } else { 0.0 }
+    }
 
     pub fn process(&mut self) -> f32 {
-        for voice in self.voice_manager.next() {
-            info!("{:?}", voice);
+        let mut output_sample: f64 = 0.0;
+        for playing_sample in self.voice_manager.next() {
+            // info!("{:?}", voice);
+            let pos = playing_sample.samples_since_start as usize;
+            if self.sample_file.samples.len() > pos {
+                output_sample += self.sample_at(pos, playing_sample.freq);
+            }
         }
-
-        0.0
+        let amplitude = i16::MAX as f32;
+        return output_sample as f32 / amplitude;
 
         // for voice in voices {
         //     let sample = self.sample_file.samples[voice.next_position()];

@@ -115,51 +115,20 @@ impl SimpleSynth {
         }
     }
 
-    fn note_on(&mut self, note: u8) {
-        self.sampler.note_on(note);
+    fn note_on(&mut self, note: u8) { self.sampler.note_on(note); }
+    fn note_off(&mut self, note: u8) { self.sampler.note_off(note); }
+    // fn note_off(&mut self, note: u8) {
+    //     use std::collections::hash_map::Entry::*;
 
-        // if self.voices.contains_key(&note) {
-        //     // Note is already playing, retrigger the envelope.
-        //     match self.voices.get_mut(&note) {
-        //         Some(voice) => { voice.envelope.retrigger(); }
-        //         None => ()
-        //     };
-        // }
-        // else {
-        //     // Create a new voice.
-        //     info!("creating voice {}", note);
-
-        //     self.voice_ma
-
-        //     // match Sampler::new(self.sample_rate, midi_note_to_hz(note)) {
-        //     //     Err(why) => { info!("wav error: {:?}", why)},
-        //     //     Ok(sampler) => {
-        //     //         let voice = Voice {
-        //     //             samples_elapsed: 0,
-        //     //             pitch_in_hz: midi::midi_note_to_hz(note),
-        //     //             released_at: None,
-        //     //             envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
-        //     //             oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
-        //     //             sampler: sampler,
-        //     //         };
-        //     //         self.voices.insert(note, voice);
-        //     //     }
-        //     // }
-        // }
-    }
-
-    fn note_off(&mut self, note: u8) {
-        use std::collections::hash_map::Entry::*;
-
-        match self.voices.entry(note) {
-            Occupied(mut entry) => {
-                let voice = entry.get_mut();
-                voice.envelope.release();
-                voice.released_at = Some(voice.samples_elapsed);
-            }
-            Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
-        }
-    }
+    //     match self.voices.entry(note) {
+    //         Occupied(mut entry) => {
+    //             let voice = entry.get_mut();
+    //             voice.envelope.release();
+    //             voice.released_at = Some(voice.samples_elapsed);
+    //         }
+    //         Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
+    //     }
+    // }
 }
 
 impl Plugin for SimpleSynth {

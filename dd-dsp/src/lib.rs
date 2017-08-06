@@ -17,6 +17,7 @@ pub use sample::SampleFile;
 
 mod voice_manager;
 pub use voice_manager::VoiceManager;
+// pub use voice_manager::PlayingVoice;
 
 mod types {
     pub type MidiNote = u8;

@@ -18,6 +18,7 @@ extern crate dd_dsp;
 use dd_dsp::envelope::{Envelope, State};
 use dd_dsp::oscillator::{SineOsc};
 use dd_dsp::midi;
+use dd_dsp::VoiceManager;
 
 /// Size of VST params.
 type Param = f32;
@@ -38,6 +39,7 @@ struct SimpleSynth {
     attack_ratio: Param,
     release_ratio: Param,
     voices: HashMap<u8, Voice>,
+    voice_manager: VoiceManager,
 }
 
 #[derive(Clone)]
@@ -54,14 +56,8 @@ struct Voice {
 }
 
 impl Default for SimpleSynth {
-    fn default() -> SimpleSynth {
-        let _ = CombinedLogger::init(
-            vec![
-                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
-                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-            ]
-        );
 
+    fn default() -> SimpleSynth {
         SimpleSynth {
             sample_rate: 0.0,
             attack_time: 0.1,
@@ -69,40 +65,56 @@ impl Default for SimpleSynth {
             attack_ratio: 0.75,
             release_ratio: 0.0001,
             voices: HashMap::new(),
+            voice_manager: VoiceManager::new(),
         }
     }
+
 }
 
 impl SimpleSynth {
+
     fn process_sample(&mut self) -> f32 {
-        if self.voices.len() > 0 {
-            self.cleanup();
-            let mut output_sample = 0.0;
+        let mut output_sample = 0.0;
+        for voice in self.voice_manager.next() {
+            // info!("{:?}", voice);
+            use std::f64::consts::PI;
+            pub const TAU : f64 = PI * 2.0;
 
-            for (_, voice) in self.voices.iter_mut() {
-                output_sample += voice.oscillator.process() * voice.envelope.process() as Sample;
-                voice.samples_elapsed += 1;
-            };
+            let sine_osc = (voice.freq * TAU * ((voice.samples_since_start) as f64 / self.sample_rate)).sin();
 
-            output_sample as f32 / 4.0 // reduce overall gain a little.
-        } else {
-            0.0
+            output_sample += sine_osc as Sample; //* voice.envelope.process() as Sample;
         }
+
+        output_sample as f32 / 4.0
+
+        // if self.voices.len() > 0 {
+        //     self.cleanup();
+        //     let mut output_sample = 0.0;
+
+        //     for (_, voice) in self.voices.iter_mut() {
+        //         output_sample += voice.oscillator.process() * voice.envelope.process() as Sample;
+        //         voice.samples_elapsed += 1;
+        //     };
+
+        //     output_sample as f32 / 4.0 // reduce overall gain a little.
+        // } else {
+        //     0.0
+        // }
     }
 
-    /// Delete finished voices. This cleanup should not occur in the processing loop.
-    fn cleanup(&mut self) { 
-        if self.voices.len() > 0 {
-            let completed_notes : Vec<_> = self.voices.iter()
-                                            .filter(|&(_, v)| v.envelope.state == State::Idle)
-                                            .map(|(k, _)| k.clone())
-                                            .collect();
-            for note in completed_notes { 
-                info!("cleaning up note {}", note);
-                self.voices.remove(&note); 
-            }
-        }
-    }
+    // /// Delete finished voices. This cleanup should not occur in the processing loop.
+    // fn cleanup(&mut self) { 
+    //     if self.voices.len() > 0 {
+    //         let completed_notes : Vec<_> = self.voices.iter()
+    //                                         .filter(|&(_, v)| v.envelope.state == State::Idle)
+    //                                         .map(|(k, _)| k.clone())
+    //                                         .collect();
+    //         for note in completed_notes { 
+    //             info!("cleaning up note {}", note);
+    //             self.voices.remove(&note); 
+    //         }
+    //     }
+    // }
 
     fn process_midi_event(&mut self, data: [u8; 3]) {
         match data[0] {
@@ -113,43 +125,53 @@ impl SimpleSynth {
     }
 
     fn note_on(&mut self, note: u8) {
-        if self.voices.contains_key(&note) {
-            // Note is already playing, retrigger the envelope.
-            match self.voices.get_mut(&note) {
-                Some(voice) => { voice.envelope.retrigger(); }
-                None => ()
-            };
-        }
-        else {
-            // Create a new voice.
-            let voice = Voice {
-                samples_elapsed: 0,
-                pitch_in_hz: midi::midi_note_to_hz(note),
-                released_at: None,
-                envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
-                oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
-            };
-            self.voices.insert(note, voice);
-        }
+        self.voice_manager.note_on(note);
+
+        // if self.voices.contains_key(&note) {
+        //     // Note is already playing, retrigger the envelope.
+        //     match self.voices.get_mut(&note) {
+        //         Some(voice) => { voice.envelope.retrigger(); }
+        //         None => ()
+        //     };
+        // }
+        // else {
+        //     // Create a new voice.
+        //     let voice = Voice {
+        //         samples_elapsed: 0,
+        //         pitch_in_hz: midi::midi_note_to_hz(note),
+        //         released_at: None,
+        //         envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
+        //         oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
+        //     };
+        //     self.voices.insert(note, voice);
+        // }
     }
 
     fn note_off(&mut self, note: u8) {
-        use std::collections::hash_map::Entry::*;
+        self.voice_manager.note_off(note);
 
-        match self.voices.entry(note) {
-            Occupied(mut entry) => {
-                let voice = entry.get_mut();
-                voice.envelope.release();
-                voice.released_at = Some(voice.samples_elapsed);
-            }
-            Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
-        }
+        // use std::collections::hash_map::Entry::*;
+
+        // match self.voices.entry(note) {
+        //     Occupied(mut entry) => {
+        //         let voice = entry.get_mut();
+        //         voice.envelope.release();
+        //         voice.released_at = Some(voice.samples_elapsed);
+        //     }
+        //     Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
+        // }
     }
 }
 
 impl Plugin for SimpleSynth {
 
     fn get_info(&self) -> Info {
+        let _ = CombinedLogger::init(
+            vec![
+                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
+                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
+            ]
+        );
         Info {
             name: "DD-SimpleSynth".to_string(),
             vendor: "DeathDisco".to_string(),
