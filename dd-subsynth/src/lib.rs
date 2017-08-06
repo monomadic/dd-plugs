@@ -65,7 +65,7 @@ impl Default for SimpleSynth {
         SimpleSynth {
             sample_rate: 0.0,
             attack_time: 0.1,
-            release_time: 0.75,
+            release_time: 0.40,
             attack_ratio: 0.75,
             release_ratio: 0.0001,
             voices: HashMap::new(),

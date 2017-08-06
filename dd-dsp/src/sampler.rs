@@ -1,21 +1,37 @@
 use std::i16;
-use hound;
+// use hound;
 // use basic_dsp;
 // use basic_dsp::{ ToComplexVector, SingleBuffer, InterpolationOps };
 // use basic_dsp::conv_types::{ SincFunction };
 
 // use log;
 
-#[derive(Clone)]
+// #[derive(Clone)]
+// pub struct Voice {
+//     read_index: f64, // current read location, double as we will have fractional locations.
+//     scale_factor: f64,
+//     sample_inc: f64,
+// }
+
+// #[derive(Clone)]
+// pub struct Mapping {}
+
+use types::*;
+
+use SampleFile;
+use VoiceManager;
+
 pub struct Sampler {
-    sample_rate: f64,
     unity_pitch: f64,
 
-    sample_count: usize,
-    samples: Vec<i16>,
-    position: usize,
+    sample_file: SampleFile,
+    voice_manager: VoiceManager,
+
     scale_factor: f64,
     sample_inc: f64,
+
+    output_channels: u16,
+    output_sample_rate: f64,
 
     read_index: f64, // current read location, double as we will have fractional locations.
 }
@@ -43,60 +59,73 @@ pub struct Sampler {
 // }
 
 impl Sampler {
-    pub fn new(sample_rate: f64, playback_pitch: f64) -> Result<Sampler, String> {
-        info!("loading new sampler.. playback_pitch: {:?}", playback_pitch);
-        const SOUNDFILE: &'static [u8] = include_bytes!("../../dd-sampler/assets/bass.wav");
-        let mut wr = match hound::WavReader::new(SOUNDFILE) {
-            Err(why) => { return Result::Err(why.to_string()) },
-            Ok(reader) => { reader }
-        };
+    pub fn new(sample_rate: f64) -> Result<Sampler, String> {
+        // info!("loading new sampler.. playback_pitch: {:?}", playback_pitch);
+        // const SOUNDFILE: &'static [u8] = include_bytes!("../../dd-sampler/assets/bass.wav");
+        // let mut wr = match hound::WavReader::new(SOUNDFILE) {
+        //     Err(why) => { return Result::Err(why.to_string()) },
+        //     Ok(reader) => { reader }
+        // };
 
-        info!("loaded sample. {:?}", wr.spec());
-        let channels = wr.spec().channels;
+        let sample = SampleFile::from_static_file(include_bytes!("../../dd-sampler/assets/bass.wav")).unwrap();
+
+        // info!("loaded sample. {:?}, len: {:?}", wr.spec(), sample.frames.len());
         // let sample_rate = wr.spec().sample_rate;
 
-        let samples: Vec<i16> = wr.samples::<i16>().map(|x|x.expect("Failed to read sample")).collect();
-
+        // let samples: Vec<i16> = wr.samples::<i16>().map(|x|x.expect("Failed to read sample")).collect();
+        let playback_pitch = 100.0;
         let unity_pitch = 440.0;
         let scale_factor = playback_pitch / unity_pitch;
         let sample_inc = sample_rate / 10000.0 * scale_factor;
-        let sample_count = samples.len();
 
         // info!("using base sample frequency A4(69): 440.0");
         // info!("A5(81): {:?}", );
         // info!("scale_factor: {:?} sample_inc {:?}", scale_factor, sample_inc);
+
+        info!("loaded single sample.");
         
         Ok(Sampler {
-            sample_rate: sample_rate,
+            output_sample_rate: sample_rate,
             unity_pitch: unity_pitch,
+            // samples: samples,
+            sample_file: sample,
 
-            samples: samples,
-            position: 0,
+            // samples: vec!(sample),
             scale_factor: scale_factor,
             sample_inc: sample_inc,
-            sample_count: sample_count,
             read_index: 0.0,
+            output_channels: 2,
+            voice_manager: VoiceManager::new(),
         })
     }
 
+    pub fn note_on(&mut self, note: MidiNote) { self.voice_manager.note_on(note) }
+
     pub fn process(&mut self) -> f32 {
-        // let channels = 1.0; // mono
-
-        // get unity note frequency
-        // let unity_frequency: f64 = self.unity_pitch / (self.sample_count as f64 / channels); //self.sample_pitch
-
-        // equivalent length
-        // let unity_length: f64 = self.sample_rate / unity_frequency;
-
-        if (self.read_index as usize) < self.samples.len() {
-            // let next_sample: usize = self.position + self.sample_offset as usize;
-            let sample = self.samples[self.read_index as usize];
-            self.read_index += self.scale_factor;
-
-            let amplitude = i16::MAX as f32;
-            return sample as f32 / amplitude
-        } else {
-            0.0
+        for voice in self.voice_manager.next() {
+            info!("{:?}", voice);
         }
+
+        0.0
+
+        // for voice in voices {
+        //     let sample = self.sample_file.samples[voice.next_position()];
+        //     // voice.1.playhead_position += 1;
+        //     let amplitude = i16::MAX as f32;
+        //     output_samples.push(sample as f32 / amplitude);
+        // }
+
+        // *output_samples.first().unwrap()
+
+        // if (self.read_index as usize) < self.sample.frames.len() {
+        //     let sample = self.sample.frames[self.read_index as usize];
+        //     self.read_index += self.scale_factor;
+
+        //     let amplitude = i16::MAX as f32;
+        //     info!("sample");
+        //     return sample as f32 / amplitude
+        // } else {
+        //     0.0
+        // }
     }
 }

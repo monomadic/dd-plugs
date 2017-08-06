@@ -19,6 +19,7 @@ use dd_dsp::*;
 use dd_dsp::{ Envelope, State };
 use dd_dsp::oscillator::{ SineOsc };
 use dd_dsp::sampler::{ Sampler };
+// use dd_dsp::Sample;
 
 extern crate log_panics;
 
@@ -41,6 +42,7 @@ struct SimpleSynth {
     attack_ratio: Param,
     release_ratio: Param,
     voices: HashMap<u8, Voice>,
+    sampler: Sampler,
 }
 
 #[derive(Clone)]
@@ -51,7 +53,6 @@ struct Voice {
     /// Volume envelope for this voice.
     envelope: Envelope,
     oscillator: SineOsc,
-    sampler: Sampler,
 
     /// Time when note_off was fired.
     released_at: Option<SampleTiming>,
@@ -61,33 +62,35 @@ impl Default for SimpleSynth {
     fn default() -> SimpleSynth {
         SimpleSynth {
             sample_rate: 0.0,
-            attack_time: 0.0,
-            release_time: 0.0,
-            attack_ratio: 0.0,
+            attack_time: 0.02,
+            release_time: 0.02,
+            attack_ratio: 0.02,
             release_ratio: 0.0001,
             voices: HashMap::new(),
+            sampler: Sampler::new(44100.0).expect("sampler should initialise"),
         }
     }
 }
 
 impl SimpleSynth {
     fn process_sample(&mut self) -> f32 {
-        if self.voices.len() > 0 {
-            self.cleanup();
-            let mut output_sample = 0.0;
+        self.sampler.process()
+        // if self.voices.len() > 0 {
+        //     self.cleanup();
+        //     let mut output_sample = 0.0;
 
-            for (_, voice) in self.voices.iter_mut() {
-                let sample = voice.sampler.process();
+        //     for (_, voice) in self.voices.iter_mut() {
+        //         let sample = voice.sampler.process();
 
-                // info!("{}", sample);
-                output_sample += sample * voice.envelope.process();
-                voice.samples_elapsed += 1;
-            };
+        //         // info!("{}", sample);
+        //         output_sample += sample * voice.envelope.process();
+        //         voice.samples_elapsed += 1;
+        //     };
 
-            output_sample
-        } else {
-            0.0
-        }
+        //     output_sample
+        // } else {
+        //     0.0
+        // }
     }
 
     /// Delete finished voices. This cleanup should not occur in the processing loop.
@@ -113,40 +116,36 @@ impl SimpleSynth {
     }
 
     fn note_on(&mut self, note: u8) {
-        if self.voices.contains_key(&note) {
-            // Note is already playing, retrigger the envelope.
-            match self.voices.get_mut(&note) {
-                Some(voice) => { voice.envelope.retrigger(); }
-                None => ()
-            };
-        }
-        else {
-            // Create a new voice.
-            info!("creating voice {}", note);
-            use log_panics;
-            log_panics::init();
-            let _ = CombinedLogger::init(
-                vec![
-                    // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
-                    WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-                ]
-            );
+        self.sampler.note_on(note);
 
-            match Sampler::new(self.sample_rate, midi_note_to_hz(note)) {
-                Err(why) => { info!("wav error: {:?}", why)},
-                Ok(sampler) => {
-                    let voice = Voice {
-                        samples_elapsed: 0,
-                        pitch_in_hz: midi::midi_note_to_hz(note),
-                        released_at: None,
-                        envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
-                        oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
-                        sampler: sampler,
-                    };
-                    self.voices.insert(note, voice);
-                }
-            }
-        }
+        // if self.voices.contains_key(&note) {
+        //     // Note is already playing, retrigger the envelope.
+        //     match self.voices.get_mut(&note) {
+        //         Some(voice) => { voice.envelope.retrigger(); }
+        //         None => ()
+        //     };
+        // }
+        // else {
+        //     // Create a new voice.
+        //     info!("creating voice {}", note);
+
+        //     self.voice_ma
+
+        //     // match Sampler::new(self.sample_rate, midi_note_to_hz(note)) {
+        //     //     Err(why) => { info!("wav error: {:?}", why)},
+        //     //     Ok(sampler) => {
+        //     //         let voice = Voice {
+        //     //             samples_elapsed: 0,
+        //     //             pitch_in_hz: midi::midi_note_to_hz(note),
+        //     //             released_at: None,
+        //     //             envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
+        //     //             oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
+        //     //             sampler: sampler,
+        //     //         };
+        //     //         self.voices.insert(note, voice);
+        //     //     }
+        //     // }
+        // }
     }
 
     fn note_off(&mut self, note: u8) {
@@ -165,10 +164,19 @@ impl SimpleSynth {
 
 impl Plugin for SimpleSynth {
     fn get_info(&self) -> Info {
+        use log_panics;
+        log_panics::init();
+        let _ = CombinedLogger::init(
+            vec![
+                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
+                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
+            ]
+        );
+
         Info {
             name: "DD-SimpleSynth".to_string(),
             vendor: "DeathDisco".to_string(),
-            unique_id: 6667,
+            unique_id: 6666,
             category: Category::Synth,
             inputs: 0,
             outputs: 1,
