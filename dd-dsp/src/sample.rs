@@ -17,8 +17,6 @@ impl SampleFile {
         }
     }
 
-    // fn from_file()
-
     fn from_wavreader<R:Read>(mut reader: hound::WavReader<BufReader<R>>) -> Result<Self, String> {
             let samples: Vec<i16> = reader.samples::<i16>().map(|x|x.expect("Failed to read sample")).collect();
 

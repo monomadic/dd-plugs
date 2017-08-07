@@ -5,22 +5,20 @@ use midi::midi_note_to_hz;
 
 use types::*;
 
+use Voice;
+
 pub struct VoiceManager {
     // max_voices: usize,
     pub voices: HashMap<MidiNote, Voice>,
     // envelope: E,
 }
 
-pub struct Voice {
-    pub playhead_position: Playhead, // samples since voice started.
-    pub time_of_note_on: std::time::Instant,
-}
 
-impl Voice {
-    fn next(&mut self) -> Playhead {
-        self.playhead_position += 1;
-        self.playhead_position - 1
-    }
+
+#[derive(Debug, Clone, Copy)]
+pub enum VoiceState {
+    Playing,
+    Released(std::time::Instant),
 }
 
 #[derive(Debug)]
@@ -29,6 +27,7 @@ pub struct PlayingVoice {
     pub samples_since_start: u64,
     pub gain: f64,
     pub freq: f64,
+    pub state: VoiceState,
     // vel: u8,
 }
 
@@ -40,22 +39,6 @@ impl VoiceManager {
         }
     }
 
-    // pub fn playing_voices(&mut self) -> Vec<ActiveVoice> {
-    //     let playing_voices = Vec::new();
-    //     for voice in self.voices {
-    //         playing_voices.push(ActiveVoice {
-    //             time_of_note_on: voice.time_of_note_on,
-
-    //         });
-    //     }
-
-    //     playing_voices
-    // }
-
-    //     self.voices.map(|voice| (0.0, ))
-
-    // }
-
     pub fn next(&mut self) -> Vec<PlayingVoice> {
         let mut playing_voices = Vec::new();
         for ref mut voice in self.voices.iter_mut() {
@@ -63,8 +46,8 @@ impl VoiceManager {
                 samples_since_start: voice.1.next(),
                 gain: 0.0,
                 freq: midi_note_to_hz(*voice.0),
+                state: voice.1.state,
             });
-            // voice.1.playhead_position += 1;
         }
         playing_voices
     }
@@ -75,7 +58,7 @@ impl VoiceManager {
             info!("retrig voice {}", note);
             // Note is already playing, retrigger the envelope.
             match self.voices.get_mut(&note) {
-                Some(voice) => { /*voice.envelope.retrigger();*/ }
+                Some(voice) => { voice.reset(); }
                 None => ()
             };
         } else {
@@ -96,42 +79,24 @@ impl VoiceManager {
             self.voices.insert(note, Voice {
                 playhead_position: 0,
                 time_of_note_on: std::time::Instant::now(),
+                state: VoiceState::Playing,
             });
         }
     }
 
     pub fn note_off(&mut self, note: MidiNote) {
-        // use std::collections::hash_map::Entry::*;
+         use std::collections::hash_map::Entry::*;
 
-        self.voices.remove(&note);
-
-        // match self.voices.entry(note) {
-        //     Occupied(mut entry) => {
-        //         let voice = entry.get_mut();
-        //         // voice.envelope.release();
-        //         // voice.released_at = Some(voice.samples_elapsed);
-        //     }
-        //     Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
-        // }
+         match self.voices.entry(note) {
+             Occupied(mut entry) => {
+                 let voice = entry.get_mut();
+                 voice.state = VoiceState::Released(std::time::Instant::now());
+             }
+             Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
+         }
     }
 
-    // /// Set or reset the number of voices that the Instrument can use.
-    // pub fn set_num_voices(&mut self, num_voices: usize) {
-    //     if num_voices == 0 {
-    //         println!("A Synth must have at least one voice, but the requested number is 0.");
-    //     } else {
-    //         let len = self.voices.len();
-    //         if len < num_voices {
-    //             let last_voice = self.voices[len-1].clone();
-    //             self.voices.extend(std::iter::repeat(last_voice).take(num_voices - len));
-    //         } else if len > num_voices {
-    //             self.voices.truncate(num_voices);
-    //         }
-    //     }
-    // }
+    fn kill(&mut self, note: MidiNote) {
+        self.voices.remove(note);
+    }
 }
-
-// pub trait Instrument {
-//     pub note_on();
-//     pub process();
-// }

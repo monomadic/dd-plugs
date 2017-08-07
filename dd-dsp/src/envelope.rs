@@ -1,9 +1,43 @@
-//! Basic ADSR Envelope.
+//! Recursive ADSR Envelope.
 
 use std::ops::Neg;
 
 /// Size of VST params. All incoming params are 0.0 - 1.0.
 type VSTParam = f32;
+
+//pub trait Envelope {
+//    fn new() -> Self;
+//    fn process(&mut self) -> f32;
+//}
+
+
+use time;
+use std;
+
+#[derive(Debug)]
+pub struct ADSR {
+    pub attack_time: f64,
+    pub release_time: f64,
+}
+
+impl ADSR {
+    pub fn gain_ratio(&self, started_at: std::time::Instant) -> f64 {
+        1.0
+    }
+
+    pub fn release_gain_ratio(&self, started_at: std::time::Instant, released_at: std::time::Instant) -> f64 {
+        let time_since_release_in_ms = time::Duration::from_std( std::time::Instant::now() - released_at).unwrap().num_milliseconds() as f64;
+
+        if time_since_release_in_ms < self.attack_time {
+            info!("{:?}", (time_since_release_in_ms, self.attack_time));
+            (self.attack_time - time_since_release_in_ms) / self.attack_time
+        } else {
+            0.0
+        }
+    }
+}
+
+
 
 #[derive(Clone)]
 pub struct Envelope {

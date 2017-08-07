@@ -19,6 +19,7 @@ use dd_dsp::envelope::{Envelope, State};
 use dd_dsp::oscillator::{SineOsc};
 use dd_dsp::midi;
 use dd_dsp::VoiceManager;
+use dd_dsp::envelope;
 
 /// Size of VST params.
 type Param = f32;
@@ -34,12 +35,13 @@ type SampleTiming = u64;
 
 struct SimpleSynth {
     sample_rate: f64,
-    attack_time: Param,
-    release_time: Param,
+//    attack_time: Param,
+//    release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
     voices: HashMap<u8, Voice>,
     voice_manager: VoiceManager,
+    envelope: envelope::ADSR,
 }
 
 #[derive(Clone)]
@@ -60,61 +62,43 @@ impl Default for SimpleSynth {
     fn default() -> SimpleSynth {
         SimpleSynth {
             sample_rate: 0.0,
-            attack_time: 0.1,
-            release_time: 0.40,
             attack_ratio: 0.75,
             release_ratio: 0.0001,
             voices: HashMap::new(),
             voice_manager: VoiceManager::new(),
+            envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
         }
     }
 
 }
 
+use dd_dsp::VoiceState;
+use std::f64::consts::PI;
+pub const TAU:f64 = PI * 2.0;
+
 impl SimpleSynth {
 
     fn process_sample(&mut self) -> f32 {
         let mut output_sample = 0.0;
-        for voice in self.voice_manager.next() {
-            // info!("{:?}", voice);
-            use std::f64::consts::PI;
-            pub const TAU : f64 = PI * 2.0;
+        let voices = self.voice_manager.next();
+        for voice in voices {
+
+            let envelope_gain = match voice.state {
+                VoiceState::Playing =>  {
+                    self.envelope.gain_ratio(std::time::Instant::now())
+                },
+                VoiceState::Released(release_time) => {
+                    self.envelope.release_gain_ratio(std::time::Instant::now(), release_time)
+                }
+            };
 
             let sine_osc = (voice.freq * TAU * ((voice.samples_since_start) as f64 / self.sample_rate)).sin();
 
-            output_sample += sine_osc as Sample; //* voice.envelope.process() as Sample;
+            output_sample += (sine_osc * envelope_gain) as Sample;
         }
 
         output_sample as f32 / 4.0
-
-        // if self.voices.len() > 0 {
-        //     self.cleanup();
-        //     let mut output_sample = 0.0;
-
-        //     for (_, voice) in self.voices.iter_mut() {
-        //         output_sample += voice.oscillator.process() * voice.envelope.process() as Sample;
-        //         voice.samples_elapsed += 1;
-        //     };
-
-        //     output_sample as f32 / 4.0 // reduce overall gain a little.
-        // } else {
-        //     0.0
-        // }
     }
-
-    // /// Delete finished voices. This cleanup should not occur in the processing loop.
-    // fn cleanup(&mut self) { 
-    //     if self.voices.len() > 0 {
-    //         let completed_notes : Vec<_> = self.voices.iter()
-    //                                         .filter(|&(_, v)| v.envelope.state == State::Idle)
-    //                                         .map(|(k, _)| k.clone())
-    //                                         .collect();
-    //         for note in completed_notes { 
-    //             info!("cleaning up note {}", note);
-    //             self.voices.remove(&note); 
-    //         }
-    //     }
-    // }
 
     fn process_midi_event(&mut self, data: [u8; 3]) {
         match data[0] {
@@ -126,41 +110,9 @@ impl SimpleSynth {
 
     fn note_on(&mut self, note: u8) {
         self.voice_manager.note_on(note);
-
-        // if self.voices.contains_key(&note) {
-        //     // Note is already playing, retrigger the envelope.
-        //     match self.voices.get_mut(&note) {
-        //         Some(voice) => { voice.envelope.retrigger(); }
-        //         None => ()
-        //     };
-        // }
-        // else {
-        //     // Create a new voice.
-        //     let voice = Voice {
-        //         samples_elapsed: 0,
-        //         pitch_in_hz: midi::midi_note_to_hz(note),
-        //         released_at: None,
-        //         envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
-        //         oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
-        //     };
-        //     self.voices.insert(note, voice);
-        // }
     }
 
-    fn note_off(&mut self, note: u8) {
-        self.voice_manager.note_off(note);
-
-        // use std::collections::hash_map::Entry::*;
-
-        // match self.voices.entry(note) {
-        //     Occupied(mut entry) => {
-        //         let voice = entry.get_mut();
-        //         voice.envelope.release();
-        //         voice.released_at = Some(voice.samples_elapsed);
-        //     }
-        //     Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
-        // }
-    }
+    fn note_off(&mut self, note: u8) { self.voice_manager.note_off(note); }
 }
 
 impl Plugin for SimpleSynth {
@@ -214,8 +166,8 @@ impl Plugin for SimpleSynth {
 
     fn get_parameter(&self, index: i32) -> f32 {
         match index {
-            0 => self.attack_time,
-            1 => self.release_time,
+            0 => (self.envelope.attack_time / 1000.0) as f32,
+            1 => (self.envelope.release_time / 1000.0) as f32,
             2 => self.attack_ratio,
             3 => self.release_ratio,
             _ => 0.0,
@@ -224,8 +176,8 @@ impl Plugin for SimpleSynth {
 
     fn set_parameter(&mut self, index: i32, value: f32) {
         match index {
-            0 => self.attack_time = value.max(0.001), // avoid pops by always having at least a tiny attack.
-            1 => self.release_time = value.max(0.001), // same with release.
+            0 => self.envelope.attack_time = (value.max(0.001) * 1000.0) as f64, // avoid pops by always having at least a tiny attack.
+            1 => self.envelope.release_time = (value.max(0.001) * 1000.0) as f64, // same with release.
             2 => self.attack_ratio = value.max(0.00001), // same with release.
             3 => self.release_ratio = value.max(0.00001), // same with release.
             _ => (),
@@ -244,10 +196,10 @@ impl Plugin for SimpleSynth {
 
     fn get_parameter_text(&self, index: i32) -> String {
         match index {
-            0 => format!("{}ms", (self.attack_time * 100.0)),
-            1 => format!("{}ms", (self.release_time * 100.0)),
-            2 => format!("{}", (self.attack_ratio * 100.0)),
-            3 => format!("{}", (self.release_ratio * 100.0)),
+            0 => format!("{}ms", (self.envelope.attack_time)),
+            1 => format!("{}ms", (self.envelope.release_time)),
+            2 => format!("{}", (self.attack_ratio * 1000.0)),
+            3 => format!("{}", (self.release_ratio * 1000.0)),
             _ => "".to_string(),
         }
     }

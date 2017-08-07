@@ -73,39 +73,39 @@ impl Default for SimpleSynth {
 }
 
 impl SimpleSynth {
-    fn process_sample(&mut self) -> f32 {
-        self.sampler.process()
-        // if self.voices.len() > 0 {
-        //     self.cleanup();
-        //     let mut output_sample = 0.0;
+    // fn process_sample(&mut self) -> f32 {
+    //     self.sampler.process()
+    //     // if self.voices.len() > 0 {
+    //     //     self.cleanup();
+    //     //     let mut output_sample = 0.0;
 
-        //     for (_, voice) in self.voices.iter_mut() {
-        //         let sample = voice.sampler.process();
+    //     //     for (_, voice) in self.voices.iter_mut() {
+    //     //         let sample = voice.sampler.process();
 
-        //         // info!("{}", sample);
-        //         output_sample += sample * voice.envelope.process();
-        //         voice.samples_elapsed += 1;
-        //     };
+    //     //         // info!("{}", sample);
+    //     //         output_sample += sample * voice.envelope.process();
+    //     //         voice.samples_elapsed += 1;
+    //     //     };
 
-        //     output_sample
-        // } else {
-        //     0.0
-        // }
-    }
+    //     //     output_sample
+    //     // } else {
+    //     //     0.0
+    //     // }
+    // }
 
-    /// Delete finished voices. This cleanup should not occur in the processing loop.
-    fn cleanup(&mut self) { 
-        if self.voices.len() > 0 {
-            let completed_notes : Vec<_> = self.voices.iter()
-                                            .filter(|&(_, v)| v.envelope.state == State::Idle)
-                                            .map(|(k, _)| k.clone())
-                                            .collect();
-            for note in completed_notes {
-                info!("cleaning up note {}", note);
-                self.voices.remove(&note); 
-            }
-        }
-    }
+    // /// Delete finished voices. This cleanup should not occur in the processing loop.
+    // fn cleanup(&mut self) { 
+    //     if self.voices.len() > 0 {
+    //         let completed_notes : Vec<_> = self.voices.iter()
+    //                                         .filter(|&(_, v)| v.envelope.state == State::Idle)
+    //                                         .map(|(k, _)| k.clone())
+    //                                         .collect();
+    //         for note in completed_notes {
+    //             info!("cleaning up note {}", note);
+    //             self.voices.remove(&note); 
+    //         }
+    //     }
+    // }
 
     fn process_midi_event(&mut self, data: [u8; 3]) {
         match data[0] {
@@ -171,7 +171,7 @@ impl Plugin for SimpleSynth {
         for output_channel in output_buffer {
             // there is only one channel in this instrument (mono)
             for output_sample in output_channel.iter_mut() {
-                *output_sample = self.process_sample()
+                *output_sample = self.sampler.process()
             }
         }
     }
