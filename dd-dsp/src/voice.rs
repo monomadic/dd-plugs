@@ -6,6 +6,7 @@ pub struct Voice {
     pub playhead_position: Playhead, // samples since voice started.
     pub time_of_note_on: std::time::Instant,
     pub state: VoiceState,
+    pub release_time_in_ms: u64,
 }
 
 impl Voice {

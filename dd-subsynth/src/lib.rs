@@ -92,7 +92,7 @@ impl SimpleSynth {
                 }
             };
 
-            let sine_osc = (voice.freq * TAU * ((voice.samples_since_start) as f64 / self.sample_rate)).sin();
+            let sine_osc = (voice.pitch * TAU * ((voice.samples_since_start) as f64 / self.sample_rate)).sin();
 
             output_sample += (sine_osc * envelope_gain) as Sample;
         }
@@ -112,7 +112,7 @@ impl SimpleSynth {
         self.voice_manager.note_on(note);
     }
 
-    fn note_off(&mut self, note: u8) { self.voice_manager.note_off(note); }
+    fn note_off(&mut self, note: u8) { self.voice_manager.note_off(note, self.envelope.release_time as u64); }
 }
 
 impl Plugin for SimpleSynth {

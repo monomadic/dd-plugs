@@ -27,6 +27,14 @@ impl SampleFile {
             })
     }
 
+    /// Gives a length of a resized sample at a specific pitch.
+    pub fn len_for_freq(&self, freq: f64) -> usize {
+        let unity_freq = self.unity_pitch;
+        let scale_factor = freq / unity_freq;
+        (self.samples.len() as f64 * scale_factor) as usize
+    }
+
+    /// Returns the relative sample for pos at a specific pitch.
     pub fn sample_at(&mut self, pos: usize, freq: f64) -> f64 {
         let unity_freq = self.unity_pitch;
         let scale_factor = freq / unity_freq;
