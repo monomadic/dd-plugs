@@ -15,7 +15,7 @@ use vst2::event::{Event};
 use std::collections::HashMap;
 
 extern crate dd_dsp;
-use dd_dsp::envelope::{Envelope, State};
+//use dd_dsp::envelope::{Envelope, State};
 use dd_dsp::oscillator::{SineOsc};
 use dd_dsp::midi;
 use dd_dsp::VoiceManager;
@@ -50,7 +50,7 @@ struct Voice {
     pitch_in_hz: f64,
 
     /// Volume envelope for this voice.
-    envelope: Envelope,
+//    envelope: Envelope,
     oscillator: SineOsc,
 
     /// Time when note_off was fired.

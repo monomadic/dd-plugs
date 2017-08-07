@@ -47,24 +47,8 @@ pub struct Sampler {
 
 impl Sampler {
     pub fn new(sample_rate: f64) -> Result<Sampler, String> {
-
         let sample = SampleFile::from_static_file(include_bytes!("../../dd-sampler/assets/bass.wav")).unwrap();
 
-        // info!("loaded sample. {:?}, len: {:?}", wr.spec(), sample.frames.len());
-        // let sample_rate = wr.spec().sample_rate;
-
-        // let samples: Vec<i16> = wr.samples::<i16>().map(|x|x.expect("Failed to read sample")).collect();
-        // let playback_pitch = 100.0;
-        // let unity_pitch = 440.0;
-        // let scale_factor = playback_pitch / unity_pitch;
-        // let sample_inc = sample_rate / 10000.0 * scale_factor;
-
-        // info!("using base sample frequency A4(69): 440.0");
-        // info!("A5(81): {:?}", );
-        // info!("scale_factor: {:?} sample_inc {:?}", scale_factor, sample_inc);
-
-        info!("loaded single sample.");
-        
         Ok(Sampler {
             output_sample_rate: sample_rate,
             sample_file: sample,

@@ -65,17 +65,6 @@ impl VoiceManager {
             // Create a new voice.
             info!("creating voice {}", note);
 
-            // let keydown_frequency = midi_note_to_hz(note);
-
-            // let voice = Voice {
-            //     samples_elapsed: 0,
-            //     pitch_in_hz: midi::midi_note_to_hz(note),
-            //     released_at: None,
-            //     envelope: Envelope::new(self.sample_rate as f32, self.attack_time, self.attack_ratio, self.release_time, self.release_ratio),
-            //     oscillator: SineOsc::new(self.sample_rate, midi::midi_note_to_hz(note)),
-            //     sampler: sampler,
-            // };
-
             self.voices.insert(note, Voice {
                 playhead_position: 0,
                 time_of_note_on: std::time::Instant::now(),
@@ -97,6 +86,6 @@ impl VoiceManager {
     }
 
     fn kill(&mut self, note: MidiNote) {
-        self.voices.remove(note);
+        self.voices.remove(&note);
     }
 }

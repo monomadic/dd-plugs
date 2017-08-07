@@ -16,7 +16,7 @@ use std::collections::HashMap;
 
 extern crate dd_dsp;
 use dd_dsp::*;
-use dd_dsp::{ Envelope, State };
+//use dd_dsp::{ Envelope, State };
 use dd_dsp::oscillator::{ SineOsc };
 use dd_dsp::sampler::{ Sampler };
 // use dd_dsp::Sample;
@@ -35,7 +35,7 @@ type Param = f32;
 /// Used for timings of samples (eg position into voice)
 type SampleTiming = u64;
 
-struct SimpleSynth {
+struct SimpleSampler {
     sample_rate: f64,
     attack_time: Param,
     release_time: Param,
@@ -50,17 +50,17 @@ struct Voice {
     samples_elapsed: u64,
     pitch_in_hz: f64,
 
-    /// Volume envelope for this voice.
-    envelope: Envelope,
+//    / Volume envelope for this voice.
+//    envelope: Envelope,
     oscillator: SineOsc,
 
     /// Time when note_off was fired.
     released_at: Option<SampleTiming>,
 }
 
-impl Default for SimpleSynth {
-    fn default() -> SimpleSynth {
-        SimpleSynth {
+impl Default for SimpleSampler {
+    fn default() -> SimpleSampler {
+        SimpleSampler {
             sample_rate: 0.0,
             attack_time: 0.02,
             release_time: 0.02,
@@ -72,7 +72,7 @@ impl Default for SimpleSynth {
     }
 }
 
-impl SimpleSynth {
+impl SimpleSampler {
     // fn process_sample(&mut self) -> f32 {
     //     self.sampler.process()
     //     // if self.voices.len() > 0 {
@@ -131,7 +131,7 @@ impl SimpleSynth {
     // }
 }
 
-impl Plugin for SimpleSynth {
+impl Plugin for SimpleSampler {
     fn get_info(&self) -> Info {
         use log_panics;
         log_panics::init();
@@ -233,4 +233,4 @@ impl Plugin for SimpleSynth {
     fn get_editor(&mut self) -> Option<&mut Editor> { None }
 }
 
-plugin_main!(SimpleSynth);
+plugin_main!(SimpleSampler);
