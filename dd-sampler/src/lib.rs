@@ -12,25 +12,14 @@ use vst2::plugin::{Category, Plugin, Info};
 use vst2::event::{Event};
 use vst2::editor::Editor;
 
-use std::collections::HashMap;
-
 extern crate dd_dsp;
-use dd_dsp::*;
-//use dd_dsp::{ Envelope, State };
 use dd_dsp::oscillator::{ SineOsc };
 use dd_dsp::sampler::{ Sampler };
-// use dd_dsp::Sample;
 
 extern crate log_panics;
 
 /// Size of VST params.
 type Param = f32;
-
-/// Size of samples.
-// type Sample = f64;
-
-/// Counts of samples.
-// type SampleCount = u64;
 
 /// Used for timings of samples (eg position into voice)
 type SampleTiming = u64;
@@ -41,7 +30,6 @@ struct SimpleSampler {
     release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
-    voices: HashMap<u8, Voice>,
     sampler: Sampler,
 }
 
@@ -50,8 +38,6 @@ struct Voice {
     samples_elapsed: u64,
     pitch_in_hz: f64,
 
-//    / Volume envelope for this voice.
-//    envelope: Envelope,
     oscillator: SineOsc,
 
     /// Time when note_off was fired.
@@ -66,47 +52,12 @@ impl Default for SimpleSampler {
             release_time: 0.02,
             attack_ratio: 0.02,
             release_ratio: 0.0001,
-            voices: HashMap::new(),
             sampler: Sampler::new(44100.0).expect("sampler should initialise"),
         }
     }
 }
 
 impl SimpleSampler {
-    // fn process_sample(&mut self) -> f32 {
-    //     self.sampler.process()
-    //     // if self.voices.len() > 0 {
-    //     //     self.cleanup();
-    //     //     let mut output_sample = 0.0;
-
-    //     //     for (_, voice) in self.voices.iter_mut() {
-    //     //         let sample = voice.sampler.process();
-
-    //     //         // info!("{}", sample);
-    //     //         output_sample += sample * voice.envelope.process();
-    //     //         voice.samples_elapsed += 1;
-    //     //     };
-
-    //     //     output_sample
-    //     // } else {
-    //     //     0.0
-    //     // }
-    // }
-
-    // /// Delete finished voices. This cleanup should not occur in the processing loop.
-    // fn cleanup(&mut self) { 
-    //     if self.voices.len() > 0 {
-    //         let completed_notes : Vec<_> = self.voices.iter()
-    //                                         .filter(|&(_, v)| v.envelope.state == State::Idle)
-    //                                         .map(|(k, _)| k.clone())
-    //                                         .collect();
-    //         for note in completed_notes {
-    //             info!("cleaning up note {}", note);
-    //             self.voices.remove(&note); 
-    //         }
-    //     }
-    // }
-
     fn process_midi_event(&mut self, data: [u8; 3]) {
         match data[0] {
             128 => self.note_off(data[1]),
@@ -117,18 +68,6 @@ impl SimpleSampler {
 
     fn note_on(&mut self, note: u8) { self.sampler.note_on(note); }
     fn note_off(&mut self, note: u8) { self.sampler.note_off(note); }
-    // fn note_off(&mut self, note: u8) {
-    //     use std::collections::hash_map::Entry::*;
-
-    //     match self.voices.entry(note) {
-    //         Occupied(mut entry) => {
-    //             let voice = entry.get_mut();
-    //             voice.envelope.release();
-    //             voice.released_at = Some(voice.samples_elapsed);
-    //         }
-    //         Vacant(_) => (), // If the note off event doesn't correspond to a voice, don't do anything.
-    //     }
-    // }
 }
 
 impl Plugin for SimpleSampler {

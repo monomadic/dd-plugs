@@ -39,7 +39,7 @@ struct SimpleSynth {
 //    release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
-    voices: HashMap<u8, Voice>,
+//    voices: HashMap<u8, Voice>,
     voice_manager: VoiceManager,
     envelope: envelope::ADSR,
 }
@@ -64,7 +64,7 @@ impl Default for SimpleSynth {
             sample_rate: 0.0,
             attack_ratio: 0.75,
             release_ratio: 0.0001,
-            voices: HashMap::new(),
+//            voices: HashMap::new(),
             voice_manager: VoiceManager::new(),
             envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
         }
@@ -97,7 +97,7 @@ impl SimpleSynth {
             output_sample += (sine_osc * envelope_gain) as Sample;
         }
 
-        output_sample as f32 / 4.0
+        (output_sample / 4.0) as f32
     }
 
     fn process_midi_event(&mut self, data: [u8; 3]) {

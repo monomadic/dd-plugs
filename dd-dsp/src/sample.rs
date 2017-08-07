@@ -26,4 +26,16 @@ impl SampleFile {
                 samples: samples,
             })
     }
+
+    pub fn sample_at(&mut self, pos: usize, freq: f64) -> f64 {
+        let unity_freq = self.unity_pitch;
+        let scale_factor = freq / unity_freq;
+
+        let new_samplerate_ratio = self.sample_rate / 10000.0 * scale_factor;
+        let new_pos = ((pos as f64) * new_samplerate_ratio) as usize;
+
+        if self.samples.len() > new_pos {
+            self.samples[new_pos] as f64
+        } else { 0.0 }
+    }
 }

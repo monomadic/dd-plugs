@@ -17,5 +17,6 @@ impl Voice {
     pub fn reset(&mut self) {
         self.playhead_position = 0;
         self.state = VoiceState::Playing;
+        self.time_of_note_on = std::time::Instant::now();
     }
 }

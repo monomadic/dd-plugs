@@ -29,7 +29,7 @@ impl ADSR {
         let time_since_release_in_ms = time::Duration::from_std( std::time::Instant::now() - released_at).unwrap().num_milliseconds() as f64;
 
         if time_since_release_in_ms < self.attack_time {
-            info!("{:?}", (time_since_release_in_ms, self.attack_time));
+//            info!("{:?}", (time_since_release_in_ms, self.attack_time, (self.attack_time - time_since_release_in_ms) / self.attack_time));
             (self.attack_time - time_since_release_in_ms) / self.attack_time
         } else {
             0.0
