@@ -12,12 +12,12 @@ use types::*;
 use envelope;
 
 use SampleFile;
-use VoiceManager;
+use Instrument;
 use VoiceState;
 
 pub struct Sampler {
     sample_file: SampleFile,
-    voice_manager: VoiceManager,
+    voice_manager: Instrument,
     output_channels: u16,
     output_sample_rate: f64,
     envelope: envelope::ADSR,
@@ -53,7 +53,7 @@ impl Sampler {
             output_sample_rate: sample_rate,
             sample_file: sample,
             output_channels: 2,
-            voice_manager: VoiceManager::new(),
+            voice_manager: Instrument::new(),
             envelope: envelope::ADSR{
                 attack_time: 90.0,
                 release_time: 90.0,
@@ -61,8 +61,16 @@ impl Sampler {
         })
     }
 
-    pub fn note_on(&mut self, note: MidiNote) { self.voice_manager.note_on(note) }
+//    pub fn note_on(&mut self, note: MidiNote) { self.voice_manager.note_on(note) }
     pub fn note_off(&mut self, note: MidiNote) { self.voice_manager.note_off(note, self.envelope.release_time as u64) }
+
+    pub fn process_buffer(&mut self, output_buffer: &mut Vec<&mut[f32]>) {
+        for output_channel in output_buffer.iter_mut() {
+            for output_sample in output_channel.iter_mut() {
+                *output_sample = self.process()
+            }
+        }
+    }
 
     pub fn process(&mut self) -> f32 {
         let mut output_sample: f64 = 0.0;
@@ -82,6 +90,7 @@ impl Sampler {
 
             if self.sample_file.samples.len() > pos {
                 output_sample += self.sample_file.sample_at(pos, playing_sample.pitch); // * envelope_gain;
+                output_sample +=
             }
         }
         let amplitude = i16::MAX as f32;

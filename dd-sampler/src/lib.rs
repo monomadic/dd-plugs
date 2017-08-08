@@ -13,7 +13,7 @@ use vst2::event::{Event};
 use vst2::editor::Editor;
 
 extern crate dd_dsp;
-use dd_dsp::oscillator::{ SineOsc };
+//use dd_dsp::oscillator;
 use dd_dsp::sampler::{ Sampler };
 
 extern crate log_panics;
@@ -38,7 +38,7 @@ struct Voice {
     samples_elapsed: u64,
     pitch_in_hz: f64,
 
-    oscillator: SineOsc,
+//    oscillator: SineOsc,
 
     /// Time when note_off was fired.
     released_at: Option<SampleTiming>,
@@ -103,16 +103,17 @@ impl Plugin for SimpleSampler {
             }
         }
     }
+    //        self.sampler.process_buffer(*output_buffer);
 
     fn process(&mut self, buffer: AudioBuffer<f32>) {
-        let (_, output_buffer) = buffer.split();
+        let (_, mut output_buffer) = buffer.split();
+        self.sampler.process_buffer(&mut output_buffer);
 
-        for output_channel in output_buffer {
-            // there is only one channel in this instrument (mono)
-            for output_sample in output_channel.iter_mut() {
-                *output_sample = self.sampler.process()
-            }
-        }
+//        for output_channel in *output_buffer {
+//            for output_sample in output_channel.iter_mut() {
+//                *output_sample = self.process()
+//            }
+//        };
     }
 
     fn set_sample_rate(&mut self, rate: f32) { 

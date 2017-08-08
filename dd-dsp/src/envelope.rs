@@ -36,6 +36,23 @@ impl ADSR {
         }
     }
 }
+
+#[test]
+fn it_works() {
+    assert!(true);
+}
+
+
+
+
+
+
+
+
+
+
+
+
 //
 //#[derive(Clone)]
 //pub struct Envelope {

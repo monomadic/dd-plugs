@@ -15,57 +15,53 @@ use vst2::event::{Event};
 use std::collections::HashMap;
 
 extern crate dd_dsp;
-//use dd_dsp::envelope::{Envelope, State};
-use dd_dsp::oscillator::{SineOsc};
+use dd_dsp::oscillator;
+use dd_dsp::Instrument;
 use dd_dsp::midi;
-use dd_dsp::VoiceManager;
 use dd_dsp::envelope;
+use dd_dsp::types::*;
 
 /// Size of VST params.
 type Param = f32;
-
-/// Size of samples.
-type Sample = f64;
-
-/// Counts of samples.
-// type SampleCount = u64;
 
 /// Used for timings of samples (eg position into voice)
 type SampleTiming = u64;
 
 struct SimpleSynth {
+    playhead: Playhead,
     sample_rate: f64,
-//    attack_time: Param,
-//    release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
-//    voices: HashMap<u8, Voice>,
-    voice_manager: VoiceManager,
+    instrument: Instrument,
     envelope: envelope::ADSR,
 }
 
-#[derive(Clone)]
-struct Voice {
-    samples_elapsed: u64,
-    pitch_in_hz: f64,
-
-    /// Volume envelope for this voice.
-//    envelope: Envelope,
-    oscillator: SineOsc,
-
-    /// Time when note_off was fired.
-    released_at: Option<SampleTiming>,
-}
+//#[derive(Clone)]
+//struct Voice {
+//    samples_elapsed: u64,
+//    pitch_in_hz: f64,
+//
+//    /// Volume envelope for this voice.
+//    oscillator: oscillator::Sine,
+//
+//    /// Time when note_off was fired.
+//    released_at: Option<SampleTiming>,
+//}
 
 impl Default for SimpleSynth {
-
-    fn default() -> SimpleSynth {
-        SimpleSynth {
+    fn default() -> Self {
+        let _ = CombinedLogger::init(
+            vec![
+                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
+                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
+            ]
+        );
+        Self {
+            playhead: 0,
             sample_rate: 0.0,
             attack_ratio: 0.75,
             release_ratio: 0.0001,
-//            voices: HashMap::new(),
-            voice_manager: VoiceManager::new(),
+            instrument: Instrument::new(),
             envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
         }
     }
@@ -78,26 +74,18 @@ pub const TAU:f64 = PI * 2.0;
 
 impl SimpleSynth {
 
-    fn process_sample(&mut self) -> f32 {
+    fn process_sample(&self, playhead: Playhead) -> Sample {
         let mut output_sample = 0.0;
-        let voices = self.voice_manager.next();
-        for voice in voices {
 
-            let envelope_gain = match voice.state {
-                VoiceState::Playing =>  {
-                    self.envelope.gain_ratio(std::time::Instant::now())
-                },
-                VoiceState::Released(release_time) => {
-                    self.envelope.release_gain_ratio(std::time::Instant::now(), release_time)
-                }
-            };
-
-            let sine_osc = (voice.pitch * TAU * ((voice.samples_since_start) as f64 / self.sample_rate)).sin();
-
-            output_sample += (sine_osc * envelope_gain) as Sample;
+        for (note, voice) in self.instrument.voices.iter() {
+            output_sample += oscillator::sine(
+                self.sample_rate,
+                midi::midi_note_to_hz(*note),
+                playhead
+            );
         }
 
-        (output_sample / 4.0) as f32
+        (output_sample / 4.0) as Sample
     }
 
     fn process_midi_event(&mut self, data: [u8; 3]) {
@@ -108,22 +96,13 @@ impl SimpleSynth {
         }
     }
 
-    fn note_on(&mut self, note: u8) {
-        self.voice_manager.note_on(note);
-    }
-
-    fn note_off(&mut self, note: u8) { self.voice_manager.note_off(note, self.envelope.release_time as u64); }
+    fn note_on(&mut self, note: u8) { self.instrument.note_on(note, self.playhead); }
+    fn note_off(&mut self, note: u8) { self.instrument.note_off(note, self.playhead); }
 }
 
 impl Plugin for SimpleSynth {
 
     fn get_info(&self) -> Info {
-        let _ = CombinedLogger::init(
-            vec![
-                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
-                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-            ]
-        );
         Info {
             name: "DD-SimpleSynth".to_string(),
             vendor: "DeathDisco".to_string(),
@@ -148,15 +127,17 @@ impl Plugin for SimpleSynth {
     }
 
     fn process(&mut self, buffer: AudioBuffer<f32>) {
-
         let (_, output_buffer) = buffer.split();
+        let mut buffer_size:u64 = 0;
 
         for output_channel in output_buffer {
-            // there is only one channel in this instrument (mono)
-            for output_sample in output_channel.iter_mut() {
-                *output_sample = self.process_sample()
+            buffer_size = output_channel.len() as u64;
+
+            for time in 0..buffer_size {
+                output_channel[time as usize] = self.process_sample(self.playhead + time);
             }
         }
+        self.playhead += buffer_size;
     }
 
     fn set_sample_rate(&mut self, rate: f32) { 
