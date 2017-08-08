@@ -15,10 +15,7 @@ use vst2::event::{Event};
 use std::collections::HashMap;
 
 extern crate dd_dsp;
-use dd_dsp::oscillator;
-use dd_dsp::Instrument;
-use dd_dsp::midi;
-use dd_dsp::envelope;
+use dd_dsp::{ Instrument, VoiceState, oscillator, midi, envelope };
 use dd_dsp::types::*;
 
 /// Size of VST params.
@@ -35,18 +32,6 @@ struct SimpleSynth {
     instrument: Instrument,
     envelope: envelope::ADSR,
 }
-
-//#[derive(Clone)]
-//struct Voice {
-//    samples_elapsed: u64,
-//    pitch_in_hz: f64,
-//
-//    /// Volume envelope for this voice.
-//    oscillator: oscillator::Sine,
-//
-//    /// Time when note_off was fired.
-//    released_at: Option<SampleTiming>,
-//}
 
 impl Default for SimpleSynth {
     fn default() -> Self {
@@ -68,9 +53,6 @@ impl Default for SimpleSynth {
 
 }
 
-use dd_dsp::VoiceState;
-use std::f64::consts::PI;
-pub const TAU:f64 = PI * 2.0;
 
 impl SimpleSynth {
 
