@@ -15,7 +15,11 @@ pub use midi::*;
 //pub mod sampler;
 
 mod sample;
-pub use sample::SampleFile;
+
+pub mod sampler {
+//    pub use sample::Sample;
+    pub use sample::SampleFile;
+}
 
 mod instrument;
 pub use instrument::{Instrument, VoiceState };

@@ -8,13 +8,14 @@ use simplelog::*;
 use std::fs::File;
 
 use vst2::buffer::AudioBuffer;
-use vst2::plugin::{Category, Plugin, Info};
-use vst2::event::{Event};
+use vst2::plugin::{ Category, Plugin, Info };
+use vst2::event::{ Event };
 use vst2::editor::Editor;
 
 extern crate dd_dsp;
-//use dd_dsp::oscillator;
-use dd_dsp::sampler::{ Sampler };
+use dd_dsp::sampler::SampleFile;
+use dd_dsp::{ Instrument, midi } ;
+use dd_dsp::types::*;
 
 extern crate log_panics;
 
@@ -25,12 +26,14 @@ type Param = f32;
 type SampleTiming = u64;
 
 struct SimpleSampler {
+    playhead: Playhead,
+    instrument: Instrument,
+    sample: SampleFile,
     sample_rate: f64,
     attack_time: Param,
     release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
-    sampler: Sampler,
 }
 
 #[derive(Clone)]
@@ -38,26 +41,42 @@ struct Voice {
     samples_elapsed: u64,
     pitch_in_hz: f64,
 
-//    oscillator: SineOsc,
-
     /// Time when note_off was fired.
     released_at: Option<SampleTiming>,
 }
 
 impl Default for SimpleSampler {
-    fn default() -> SimpleSampler {
+    fn default() -> Self {
         SimpleSampler {
+            playhead: 0,
+            instrument: Instrument::new(),
             sample_rate: 0.0,
             attack_time: 0.02,
             release_time: 0.02,
             attack_ratio: 0.02,
             release_ratio: 0.0001,
-            sampler: Sampler::new(44100.0).expect("sampler should initialise"),
+            sample: SampleFile::from_static_file(
+                include_bytes!("../../dd-sampler/assets/bass.wav")).unwrap(),
         }
     }
 }
 
 impl SimpleSampler {
+
+    fn process_sample(&self, playhead: Playhead) -> Sample {
+        let mut output_sample: f64 = 0.0;
+        let amplitude = std::u16::MAX as f64;
+
+        for (note, voice) in self.instrument.voices.iter() {
+            output_sample += self.sample.sample_at(
+                (playhead - voice.started_at),
+                midi::midi_note_to_hz(*note),
+             ) as f64 / amplitude;
+        }
+
+        output_sample as Sample
+    }
+
     fn process_midi_event(&mut self, data: [u8; 3]) {
         match data[0] {
             128 => self.note_off(data[1]),
@@ -66,11 +85,12 @@ impl SimpleSampler {
         }
     }
 
-    fn note_on(&mut self, note: u8) { self.sampler.note_on(note); }
-    fn note_off(&mut self, note: u8) { self.sampler.note_off(note); }
+    fn note_on(&mut self, note: u8) { self.instrument.note_on(note, self.playhead); }
+    fn note_off(&mut self, note: u8) { self.instrument.note_off(note, self.playhead); }
 }
 
 impl Plugin for SimpleSampler {
+
     fn get_info(&self) -> Info {
         use log_panics;
         log_panics::init();
@@ -92,6 +112,7 @@ impl Plugin for SimpleSampler {
             initial_delay: 0,
             ..Info::default()
         }
+
     }
 
     fn process_events(&mut self, events: Vec<Event>) {
@@ -106,14 +127,17 @@ impl Plugin for SimpleSampler {
     //        self.sampler.process_buffer(*output_buffer);
 
     fn process(&mut self, buffer: AudioBuffer<f32>) {
-        let (_, mut output_buffer) = buffer.split();
-        self.sampler.process_buffer(&mut output_buffer);
+        let (_, output_buffer) = buffer.split();
+        let mut buffer_size:u64 = 0;
 
-//        for output_channel in *output_buffer {
-//            for output_sample in output_channel.iter_mut() {
-//                *output_sample = self.process()
-//            }
-//        };
+        for output_channel in output_buffer {
+            buffer_size = output_channel.len() as u64;
+
+            for time in 0..buffer_size {
+                output_channel[time as usize] = self.process_sample(self.playhead + time);
+            }
+        }
+        self.playhead += buffer_size;
     }
 
     fn set_sample_rate(&mut self, rate: f32) { 

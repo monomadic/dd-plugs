@@ -20,7 +20,7 @@ pub struct Sampler {
     voice_manager: Instrument,
     output_channels: u16,
     output_sample_rate: f64,
-    envelope: envelope::ADSR,
+//    envelope: envelope::ADSR,
 }
 
 // fn change_speed(samples: Vec<i16>) -> Vec<i16> {
@@ -54,46 +54,46 @@ impl Sampler {
             sample_file: sample,
             output_channels: 2,
             voice_manager: Instrument::new(),
-            envelope: envelope::ADSR{
-                attack_time: 90.0,
-                release_time: 90.0,
-            }
+//            envelope: envelope::ADSR{
+//                attack_time: 90.0,
+//                release_time: 90.0,
+//            }
         })
     }
 
 //    pub fn note_on(&mut self, note: MidiNote) { self.voice_manager.note_on(note) }
-    pub fn note_off(&mut self, note: MidiNote) { self.voice_manager.note_off(note, self.envelope.release_time as u64) }
+//    pub fn note_off(&mut self, note: MidiNote) { self.voice_manager.note_off(note, self.play) }
 
-    pub fn process_buffer(&mut self, output_buffer: &mut Vec<&mut[f32]>) {
-        for output_channel in output_buffer.iter_mut() {
-            for output_sample in output_channel.iter_mut() {
-                *output_sample = self.process()
-            }
-        }
-    }
+//    pub fn process_buffer(&mut self, output_buffer: &mut Vec<&mut[f32]>) {
+//        for output_channel in output_buffer.iter_mut() {
+//            for output_sample in output_channel.iter_mut() {
+//                *output_sample = self.process()
+//            }
+//        }
+//    }
 
-    pub fn process(&mut self) -> f32 {
-        let mut output_sample: f64 = 0.0;
-        let voices = self.voice_manager.next();
-        for playing_sample in voices {
-            let pos = playing_sample.samples_since_start as usize;
-
-//            let envelope_gain = match playing_sample.state {
-//                VoiceState::Playing =>  {
-//                    self.envelope.gain_ratio(std::time::Instant::now())
-//                },
-//                VoiceState::Released(release_time) => {
-//                    self.envelope.release_gain_ratio(std::time::Instant::now(), release_time)
-//                }
-//            };
-//            info!("{:?}", envelope_gain);
-
-            if self.sample_file.samples.len() > pos {
-                output_sample += self.sample_file.sample_at(pos, playing_sample.pitch); // * envelope_gain;
-                output_sample +=
-            }
-        }
-        let amplitude = i16::MAX as f32;
-        return output_sample as f32 / amplitude;
-    }
+//    pub fn process(&mut self) -> f32 {
+//        let mut output_sample: f64 = 0.0;
+//        let voices = self.voice_manager.next();
+//        for playing_sample in voices {
+//            let pos = playing_sample.samples_since_start as usize;
+//
+////            let envelope_gain = match playing_sample.state {
+////                VoiceState::Playing =>  {
+////                    self.envelope.gain_ratio(std::time::Instant::now())
+////                },
+////                VoiceState::Released(release_time) => {
+////                    self.envelope.release_gain_ratio(std::time::Instant::now(), release_time)
+////                }
+////            };
+////            info!("{:?}", envelope_gain);
+//
+//            if self.sample_file.samples.len() > pos {
+//                output_sample += self.sample_file.sample_at(pos, playing_sample.pitch); // * envelope_gain;
+//                output_sample +=
+//            }
+//        }
+//        let amplitude = i16::MAX as f32;
+//        return output_sample as f32 / amplitude;
+//    }
 }

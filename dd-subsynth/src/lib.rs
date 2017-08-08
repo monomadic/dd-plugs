@@ -12,7 +12,7 @@ use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
 use vst2::event::{Event};
 
-use std::collections::HashMap;
+//use std::collections::HashMap;
 
 extern crate dd_dsp;
 use dd_dsp::{ Instrument, VoiceState, oscillator, midi, envelope };
@@ -26,11 +26,11 @@ type SampleTiming = u64;
 
 struct SimpleSynth {
     playhead: Playhead,
+    instrument: Instrument,
     sample_rate: f64,
     attack_ratio: Param,
     release_ratio: Param,
-    instrument: Instrument,
-    envelope: envelope::ADSR,
+//    envelope: envelope::ADSR,
 }
 
 impl Default for SimpleSynth {
@@ -43,16 +43,14 @@ impl Default for SimpleSynth {
         );
         Self {
             playhead: 0,
+            instrument: Instrument::new(),
             sample_rate: 0.0,
             attack_ratio: 0.75,
             release_ratio: 0.0001,
-            instrument: Instrument::new(),
-            envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
+//            envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
         }
     }
-
 }
-
 
 impl SimpleSynth {
 
@@ -129,8 +127,8 @@ impl Plugin for SimpleSynth {
 
     fn get_parameter(&self, index: i32) -> f32 {
         match index {
-            0 => (self.envelope.attack_time / 1000.0) as f32,
-            1 => (self.envelope.release_time / 1000.0) as f32,
+//            0 => (self.envelope.attack_time / 1000.0) as f32,
+//            1 => (self.envelope.release_time / 1000.0) as f32,
             2 => self.attack_ratio,
             3 => self.release_ratio,
             _ => 0.0,
@@ -139,8 +137,8 @@ impl Plugin for SimpleSynth {
 
     fn set_parameter(&mut self, index: i32, value: f32) {
         match index {
-            0 => self.envelope.attack_time = (value.max(0.001) * 1000.0) as f64, // avoid pops by always having at least a tiny attack.
-            1 => self.envelope.release_time = (value.max(0.001) * 1000.0) as f64, // same with release.
+//            0 => self.envelope.attack_time = (value.max(0.001) * 1000.0) as f64, // avoid pops by always having at least a tiny attack.
+//            1 => self.envelope.release_time = (value.max(0.001) * 1000.0) as f64, // same with release.
             2 => self.attack_ratio = value.max(0.00001), // same with release.
             3 => self.release_ratio = value.max(0.00001), // same with release.
             _ => (),
@@ -159,8 +157,8 @@ impl Plugin for SimpleSynth {
 
     fn get_parameter_text(&self, index: i32) -> String {
         match index {
-            0 => format!("{}ms", (self.envelope.attack_time)),
-            1 => format!("{}ms", (self.envelope.release_time)),
+//            0 => format!("{}ms", (self.envelope.attack_time)),
+//            1 => format!("{}ms", (self.envelope.release_time)),
             2 => format!("{}", (self.attack_ratio * 1000.0)),
             3 => format!("{}", (self.release_ratio * 1000.0)),
             _ => "".to_string(),
