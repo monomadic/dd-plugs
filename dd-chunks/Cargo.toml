@@ -1,0 +1,14 @@
+[package]
+name = "dd_chunks"
+version = "0.1.0"
+authors = ["Rob Saunders <rob@wearebrandnew.com>"]
+
+[dependencies]
+vst2 = { path = "/Users/rob/Projects/_src/rust-vst2" }
+log = "0.3"
+simplelog = "0.4.2"
+time = "0.1"
+
+[lib]
+name = "dd_chunks"
+crate-type = ["cdylib"]

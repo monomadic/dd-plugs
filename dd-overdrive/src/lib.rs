@@ -29,9 +29,16 @@ impl Plugin for DigiDist {
             outputs: 2,
             parameters: 2,
 
+            preset_chunks: true,
+
             ..Info::default()
         }
     }
+
+    fn get_preset_data(&mut self) -> Vec<u8> { info!("get_preset_data called"); Vec::new() }
+    fn get_bank_data(&mut self) -> Vec<u8> { info!("get_bank_data called"); Vec::new() }
+    fn load_preset_data(&mut self, data: &[u8]) { info!("load_preset_data called"); }
+    fn load_bank_data(&mut self, data: &[u8]) { info!("load_bank_data called"); }
 
     fn get_parameter(&self, index: i32) -> f32 {
         match index {

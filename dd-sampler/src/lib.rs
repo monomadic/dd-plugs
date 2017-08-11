@@ -1,8 +1,10 @@
-#[macro_use] 
+#[macro_use]
 extern crate vst2;
-#[macro_use] 
+#[macro_use]
 extern crate log;
 extern crate simplelog;
+
+extern crate nfd;
 
 use simplelog::*;
 use std::fs::File;
@@ -47,6 +49,21 @@ struct Voice {
 
 impl Default for SimpleSampler {
     fn default() -> Self {
+        use log_panics;
+        log_panics::init();
+        let _ = CombinedLogger::init(
+            vec![
+                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
+                WriteLogger::new(LogLevelFilter::Error, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
+            ]
+        );
+        error!("Loaded dd-sampler....");
+
+//        use nfd::Response;
+//        let result = nfd::open_file_dialog(None, None).unwrap_or_else(|e| {
+//            panic!(e);
+//        });
+
         SimpleSampler {
             playhead: 0,
             instrument: Instrument::new(),
@@ -56,13 +73,12 @@ impl Default for SimpleSampler {
             attack_ratio: 0.02,
             release_ratio: 0.0001,
             sample: SampleFile::from_static_file(
-                include_bytes!("../../dd-sampler/assets/bass.wav")).unwrap(),
+                include_bytes!("../../dd-sampler/assets/snare.wav")).unwrap(),
         }
     }
 }
 
 impl SimpleSampler {
-
     fn process_sample(&self, playhead: Playhead) -> Sample {
         let mut output_sample: f64 = 0.0;
         let amplitude = std::u16::MAX as f64;
@@ -85,32 +101,52 @@ impl SimpleSampler {
         }
     }
 
-    fn note_on(&mut self, note: u8) { self.instrument.note_on(note, self.playhead); }
+    fn note_on(&mut self, note: u8) {
+        if note == 0 {
+            error!("changing file...");
+            self.sample = SampleFile::from_static_file(
+                include_bytes!("../../dd-sampler/assets/bass.wav")).unwrap();
+
+//            use nfd::Response;
+//            nfd::open_file_dialog(None, None);
+
+//            let result = nfd::open_file_dialog(None, None);
+//                .unwrap_or_else(|e| {
+//                error!("{:?}", e);
+//            });
+//            match result {
+//                Response::Okay(file_path) => {
+//                    error!("File path = {:?}", file_path);
+//                    self.sample = SampleFile::from_path(file_path).unwrap();
+//                    error!("loaded.");
+//                },
+//                Response::OkayMultiple(files) => error!("Files {:?}", files),
+//                Response::Cancel => error!("User canceled"),
+//            }
+        };
+        self.instrument.note_on(note, self.playhead);
+    }
+
     fn note_off(&mut self, note: u8) { self.instrument.note_off(note, self.playhead); }
 }
 
 impl Plugin for SimpleSampler {
 
     fn get_info(&self) -> Info {
-        use log_panics;
-        log_panics::init();
-        let _ = CombinedLogger::init(
-            vec![
-                // TermLogger::new( LevelFilter::Warn, Config::default()).unwrap(),
-                WriteLogger::new(LogLevelFilter::Info, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
-            ]
-        );
-
         Info {
             name: "DD-SimpleSynth".to_string(),
             vendor: "DeathDisco".to_string(),
-            unique_id: 6666,
+            unique_id: 6600,
             category: Category::Synth,
             inputs: 0,
             outputs: 1,
             parameters: 4,
             initial_delay: 0,
-            ..Info::default()
+            preset_chunks: true,
+            f64_precision: true,
+            silent_when_stopped: false,
+            presets: 1,
+            version: 0001,
         }
 
     }
@@ -124,7 +160,6 @@ impl Plugin for SimpleSampler {
             }
         }
     }
-    //        self.sampler.process_buffer(*output_buffer);
 
     fn process(&mut self, buffer: AudioBuffer<f32>) {
         let (_, output_buffer) = buffer.split();
@@ -140,7 +175,7 @@ impl Plugin for SimpleSampler {
         self.playhead += buffer_size;
     }
 
-    fn set_sample_rate(&mut self, rate: f32) { 
+    fn set_sample_rate(&mut self, rate: f32) {
         info!("sample rate is assigned to {}", rate);
         self.sample_rate = rate as f64;
     }
@@ -155,7 +190,13 @@ impl Plugin for SimpleSampler {
         }
     }
 
+    fn get_preset_data(&mut self) -> Vec<u8> { vec!(44, 55, 66) }
+    fn get_bank_data(&mut self) -> Vec<u8> { vec!(44, 55, 77) }
+    fn load_preset_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_preset_data called: {:?}", (data, data.len())); }
+    fn load_bank_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_bank_data called: {:?}", (data, data.len())); }
+
     fn set_parameter(&mut self, index: i32, value: f32) {
+        error!("set_parameter called.");
         match index {
             0 => self.attack_time = value.max(0.001), // avoid pops by always having at least a tiny attack.
             1 => self.release_time = value.max(0.001), // same with release.

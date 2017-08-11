@@ -1,2 +1,2 @@
 [workspace]
-members = ["dd-subsynth", "dd-sampler"]
+members = ["dd-sampler", "dd-chunks"]

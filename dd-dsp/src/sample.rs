@@ -10,9 +10,17 @@ pub struct SampleFile {
 }
 
 impl SampleFile {
+
     pub fn from_static_file(file: &'static [u8]) -> Result<Self, String> {
         // let samples: Vec<i16> = reader.samples::<i16>().map(|x|x.expect("Failed to read sample")).collect();
         match hound::WavReader::new(BufReader::new(&file[..])) {
+            Ok(samplefile) => SampleFile::from_wavreader(samplefile),
+            Err(why) => Err(format!("{:?}", why)),
+        }
+    }
+
+    pub fn from_path(file: String) -> Result<Self, String> {
+        match hound::WavReader::open(file) {
             Ok(samplefile) => SampleFile::from_wavreader(samplefile),
             Err(why) => Err(format!("{:?}", why)),
         }
