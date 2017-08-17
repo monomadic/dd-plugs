@@ -36,6 +36,7 @@ struct SimpleSampler {
     release_time: Param,
     attack_ratio: Param,
     release_ratio: Param,
+    preset: Vec<u8>,
 }
 
 #[derive(Clone)]
@@ -57,7 +58,7 @@ impl Default for SimpleSampler {
                 WriteLogger::new(LogLevelFilter::Error, Config::default(), File::create("/tmp/simplesynth.log").unwrap()),
             ]
         );
-        error!("Loaded dd-sampler....");
+        error!("Loaded dd-sampler.");
 
 //        use nfd::Response;
 //        let result = nfd::open_file_dialog(None, None).unwrap_or_else(|e| {
@@ -72,6 +73,7 @@ impl Default for SimpleSampler {
             release_time: 0.02,
             attack_ratio: 0.02,
             release_ratio: 0.0001,
+            preset: vec![44_u8, 55_u8, 66_u8],
             sample: SampleFile::from_static_file(
                 include_bytes!("../../dd-sampler/assets/snare.wav")).unwrap(),
         }
@@ -190,10 +192,16 @@ impl Plugin for SimpleSampler {
         }
     }
 
-    fn get_preset_data(&mut self) -> Vec<u8> { vec!(44, 55, 66) }
-    fn get_bank_data(&mut self) -> Vec<u8> { vec!(44, 55, 77) }
-    fn load_preset_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_preset_data called: {:?}", (data, data.len())); }
-    fn load_bank_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_bank_data called: {:?}", (data, data.len())); }
+    fn get_preset_data(&mut self) -> Vec<u8> {
+        error!("[SAVE TO PRESET] get_preset_data");
+        self.preset.clone()
+    }
+    fn get_bank_data(&mut self) -> Vec<u8> {
+        error!("[SAVE TO PRESET] get_bank_data");
+        self.preset.clone()
+    }
+    fn load_preset_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_preset_data called: {:?}", (data, data[0], data.len())); }
+    fn load_bank_data(&mut self, data: &[u8]) { error!("[LOAD FROM PRESET] load_bank_data called: {:?}", (data, data[0], data.len())); }
 
     fn set_parameter(&mut self, index: i32, value: f32) {
         error!("set_parameter called.");
