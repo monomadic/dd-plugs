@@ -12,6 +12,7 @@ use std::fs::File;
 use vst2::buffer::AudioBuffer;
 use vst2::plugin::{ Category, Plugin, Info };
 use vst2::event::{ Event };
+use vst2::api::{ Events };
 use vst2::editor::Editor;
 
 extern crate dd_dsp;
@@ -153,17 +154,17 @@ impl Plugin for SimpleSampler {
 
     }
 
-    fn process_events(&mut self, events: Vec<Event>) {
-        for event in events {
+    fn process_events(&mut self, events: &Events) {
+        for &e in events.events_raw() {
+            let event: Event = Event::from(unsafe { *e });
             match event {
-                Event::Midi { data, .. } => self.process_midi_event(data),
-                Event::SysEx { .. } => info!("sysex"),
-                Event::Deprecated { .. } => info!("deprecated"),
+                Event::Midi(ev) => self.process_midi_event(ev.data),
+                _ => ()
             }
         }
     }
 
-    fn process(&mut self, buffer: AudioBuffer<f32>) {
+    fn process(&mut self, buffer: &mut AudioBuffer<f32>) {
         let (_, output_buffer) = buffer.split();
         let mut buffer_size:u64 = 0;
 

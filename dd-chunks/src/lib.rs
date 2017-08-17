@@ -111,11 +111,10 @@ impl Plugin for Chunker {
 
 }
 
-extern crate libc;
 impl Editor for Chunker {
     fn size(&self) -> (i32, i32) { (200, 100) }
     fn position(&self) -> (i32, i32) { (0, 0) }
-    fn open(&mut self, window: *mut libc::c_void) {}
+    fn open(&mut self, window: *mut std::os::raw::c_void) {}
     fn is_open(&mut self) -> bool { true }
 }
 
