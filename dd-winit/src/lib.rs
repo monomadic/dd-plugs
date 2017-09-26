@@ -7,6 +7,10 @@ extern crate vst2;
 extern crate log;
 extern crate simplelog;
 
+extern crate winit;
+extern crate cocoa;
+use cocoa::base::id;
+
 use simplelog::*;
 use std::fs::File;
 
@@ -16,9 +20,9 @@ extern crate bincode;
 
 use bincode::{serialize, deserialize, Infinite};
 
-use vst2::buffer::AudioBuffer;
+// use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
-use vst2::event::{Event};
+// use vst2::event::{Event};
 
 /// Size of VST params.
 type Param = f32;
@@ -74,7 +78,7 @@ impl Plugin for Chunker {
     }
 
     fn get_preset_num(&self) -> i32 { 0 }
-    fn change_preset(&mut self, preset: i32) { }
+    fn change_preset(&mut self, _: i32) { }
 
     fn get_preset_name(&self, preset: i32) -> String {
         match preset {
@@ -85,7 +89,7 @@ impl Plugin for Chunker {
         }
     }
 
-    fn set_preset_name(&mut self, name: String) { }
+    fn set_preset_name(&mut self, _: String) { }
 
     fn get_info(&self) -> Info {
         Info {
@@ -102,10 +106,10 @@ impl Plugin for Chunker {
         }
     }
 
-    fn get_parameter(&self, index: i32) -> f32 { self.preset.volume }
-    fn set_parameter(&mut self, index: i32, value: f32) { self.preset.volume = value }
+    fn get_parameter(&self, _: i32) -> f32 { self.preset.volume }
+    fn set_parameter(&mut self, _: i32, value: f32) { self.preset.volume = value }
 
-    fn can_be_automated(&self, index: i32) -> bool { error!("can_be_automated called"); true }
+    fn can_be_automated(&self, _: i32) -> bool { error!("can_be_automated called"); true }
 
     // Some hosts, like Bitwig, break the VST2.4 spec and won't call getChunk/setChunk unless
     // a gui is present or params have been altered prior to saving a preset.
@@ -116,7 +120,13 @@ impl Plugin for Chunker {
 impl Editor for Chunker {
     fn size(&self) -> (i32, i32) { (200, 100) }
     fn position(&self) -> (i32, i32) { (0, 0) }
-    fn open(&mut self, window: *mut std::os::raw::c_void) {}
+    fn open(&mut self, window: *mut std::os::raw::c_void) {
+        let mut events_loop = winit::EventsLoop::new();
+
+        use winit::os::macos::WindowBuilderExt;
+        let w = winit::WindowBuilder::new().attach_to_existing_context(window);
+        let win = w.build(&events_loop);
+    }
     fn is_open(&mut self) -> bool { true }
 }
 

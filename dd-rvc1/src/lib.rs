@@ -1,49 +1,80 @@
+// based on mverb
+// https://github.com/martineastwood/mverb/blob/master/VstPlugin.cpp
+
 #[macro_use] extern crate vst2;
 
 use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
 
-struct DigiDist {
-    threshold: f32,
+const SAMPLE_RATE: f32 = 44100.;
+const PRE_DELAY_TIME: f32 = 100. * (SAMPLE_RATE / 1000.);
+
+struct CombVerb {
+
+    // params:
+    dampening_freq: f32,
+    density: f32,
+    bandwidth_freq: f32,
+    decay: f32,
+    pre_delay: f32,
+    size: f32,
     gain: f32,
+    mix: f32,
+    early_mix: f32,
+
+    // state:
+    prev_left_tank: f32,
+    prev_right_tank: f32,
+    sample_rate: f32,
+
 }
 
-impl Default for DigiDist {
-    fn default() -> DigiDist {
-        DigiDist {
-            threshold: 1.0, // VST parameters are always 0.0 to 1.0
-            gain: 1.0,
+impl Default for CombVerb {
+    fn default() -> CombVerb {
+        CombVerb {
+            // presets
+            dampening_freq: 18000.,
+            density: 1.,
+            bandwidth_freq: 18000.,
+            decay: 0.5,
+            pre_delay: 100. * (SAMPLE_RATE / 1000.),
+            gain: 1.,
+            mix: 1.,
+            size: 1.,
+            early_mix: 1.,
+            // state
+            prev_left_tank: 0.,
+            prev_right_tank: 0.,
+            sample_rate: 0.,
         }
     }
 }
 
-impl Plugin for DigiDist {
+impl Plugin for CombVerb {
     fn get_info(&self) -> Info {
         Info {
-            name: "DigiDist".to_string(),
+            name: "CombVerb".to_string(),
             vendor: "DeathDisco".to_string(),
-            unique_id: 25032022,
+            unique_id: 11002233,
             category: Category::Effect,
 
             inputs: 2,
             outputs: 2,
-            parameters: 2,
-
-            preset_chunks: true,
+            parameters: 9,
 
             ..Info::default()
         }
     }
 
-    fn get_preset_data(&mut self) -> Vec<u8> { Vec::new() }
-    fn get_bank_data(&mut self) -> Vec<u8> { Vec::new() }
-    fn load_preset_data(&mut self, data: &[u8]) { }
-    fn load_bank_data(&mut self, data: &[u8]) { }
+    // fn get_preset_data(&mut self) -> Vec<u8> { Vec::new() }
+    // fn get_bank_data(&mut self) -> Vec<u8> { Vec::new() }
+    // fn load_preset_data(&mut self, data: &[u8]) { }
+    // fn load_bank_data(&mut self, data: &[u8]) { }
 
     fn get_parameter(&self, index: i32) -> f32 {
         match index {
-            0 => self.threshold,
-            1 => self.gain,
+            0 => self.bandwidth_freq,
+            1 => self.dampening_freq,
             _ => 0.0,
         }
     }
@@ -51,16 +82,16 @@ impl Plugin for DigiDist {
     fn set_parameter(&mut self, index: i32, value: f32) {
         match index {
             // We don't want to divide by zero, so we'll clamp the value
-            0 => self.threshold = value.max(0.01),
-            1 => self.gain = value,
+            0 => self.bandwidth_freq = value.max(0.01),
+            1 => self.dampening_freq = value,
             _ => (),
         }
     }
 
     fn get_parameter_name(&self, index: i32) -> String {
         match index {
-            0 => "Threshold".to_string(),
-            1 => "Gain".to_string(),
+            0 => "Room Size".to_string(),
+            1 => "Dampening".to_string(),
             _ => "".to_string(),
         }
     }
@@ -68,8 +99,8 @@ impl Plugin for DigiDist {
     fn get_parameter_text(&self, index: i32) -> String {
         match index {
             // Convert to a percentage
-            0 => format!("{}", self.threshold * 100.0),
-            1 => format!("{}", self.gain * 100.0),
+            0 => format!("{}", self.bandwidth_freq * 100.0),
+            1 => format!("{}", self.dampening_freq * 100.0),
             _ => "".to_string(),
         }
     }
@@ -82,7 +113,12 @@ impl Plugin for DigiDist {
         }
     }
 
+    fn set_sample_rate(&mut self, rate: f32) { 
+        self.sample_rate = rate;
+    }
+
     fn process(&mut self, buffer: &mut AudioBuffer<f32>) {
+
         // Split out the input and output buffers into two vectors
         let (input_buffer, mut output_buffer) = buffer.split();
 
@@ -102,11 +138,13 @@ impl Plugin for DigiDist {
         // Zip and process
         for ((left_in, right_in), (left_out, right_out)) in stereo_in.zip(stereo_out) {
 
+
+
             if *left_in >= 0.0 {
-                *left_out = left_in.min(self.threshold) / self.threshold * self.gain;
+                *left_out = left_in.min(self.bandwidth_freq) / self.bandwidth_freq * self.dampening_freq;
             }
             else {
-                *right_out = left_in.max(-self.threshold) / self.threshold * self.gain;
+                *right_out = left_in.max(-self.bandwidth_freq) / self.bandwidth_freq * self.dampening_freq;
             }
 
             *left_out = *left_in + *left_out;
@@ -115,4 +153,4 @@ impl Plugin for DigiDist {
     }
 }
 
-plugin_main!(DigiDist);
+plugin_main!(CombVerb);

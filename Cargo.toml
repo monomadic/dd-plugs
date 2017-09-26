@@ -1,2 +1,2 @@
 [workspace]
-members = ["dd-sampler", "dd-chunks"]
+members = ["dd-rvc1"]

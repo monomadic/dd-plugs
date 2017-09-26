@@ -1,0 +1,19 @@
+[package]
+name = "dd_winit"
+version = "0.1.0"
+authors = ["Rob Saunders <rob@wearebrandnew.com>"]
+
+[dependencies]
+vst2 = { git = "https://github.com/rust-dsp/rust-vst" }
+winit = { path = "../../_forks/winit" }
+cocoa = "0.9"
+log = "0.3"
+simplelog = "0.4.2"
+time = "0.1"
+serde = "1.0"
+serde_derive = "1.0.11"
+bincode = "0.8"
+
+[lib]
+name = "dd_winit"
+crate-type = ["cdylib"]
