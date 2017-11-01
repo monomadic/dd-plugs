@@ -11,26 +11,21 @@ use std::fs::File;
 use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
 use vst2::event::{Event};
+use vst2::api::Events;
 
-//use std::collections::HashMap;
+use std::collections::HashMap;
 
 extern crate dd_dsp;
-use dd_dsp::{ Instrument, VoiceState, oscillator, midi, envelope };
+use dd_dsp::{ Instrument, oscillator, midi, Envelope, SimpleEnvelope };
 use dd_dsp::types::*;
 
 /// Size of VST params.
-type Param = f32;
-
-/// Used for timings of samples (eg position into voice)
-type SampleTiming = u64;
+type VSTParam = f32;
 
 struct SimpleSynth {
     playhead: Playhead,
-    instrument: Instrument,
     sample_rate: f64,
-    attack_ratio: Param,
-    release_ratio: Param,
-//    envelope: envelope::ADSR,
+    instrument: Instrument<SimpleEnvelope>,
 }
 
 impl Default for SimpleSynth {
@@ -43,11 +38,13 @@ impl Default for SimpleSynth {
         );
         Self {
             playhead: 0,
-            instrument: Instrument::new(),
             sample_rate: 0.0,
-            attack_ratio: 0.75,
-            release_ratio: 0.0001,
-//            envelope: envelope::ADSR{ attack_time: 50.0, release_time: 90.0 },
+            // attack_ratio: 0.75,
+            // release_ratio: 0.0001,
+            instrument: Instrument {
+                voices: HashMap::new(),
+                envelope: SimpleEnvelope{ attack: 0.2, release: 0.4 }
+            },
         }
     }
 }
@@ -58,11 +55,12 @@ impl SimpleSynth {
         let mut output_sample = 0.0;
 
         for (note, voice) in self.instrument.voices.iter() {
-            output_sample += oscillator::sine(
+            let signal = oscillator::sine(
                 self.sample_rate,
                 midi::midi_note_to_hz(*note),
-                playhead
-            );
+                playhead);
+            let envelope_ratio = self.instrument.envelope.ratio(playhead, voice, self.sample_rate);
+            output_sample += signal * envelope_ratio;
         }
 
         (output_sample / 4.0) as Sample
@@ -82,10 +80,10 @@ impl SimpleSynth {
 
 impl Plugin for SimpleSynth {
 
-    fn get_preset_data(&mut self) -> Vec<u8> { info!("get_preset_data called"); Vec::new() }
-    fn get_bank_data(&mut self) -> Vec<u8> { info!("get_bank_data called"); Vec::new() }
-    fn load_preset_data(&mut self, data: &[u8]) { info!("load_preset_data called"); }
-    fn load_bank_data(&mut self, data: &[u8]) { info!("load_bank_data called"); }
+    // fn get_preset_data(&mut self) -> Vec<u8> { info!("get_preset_data called"); Vec::new() }
+    // fn get_bank_data(&mut self) -> Vec<u8> { info!("get_bank_data called"); Vec::new() }
+    // fn load_preset_data(&mut self, data: &[u8]) { info!("load_preset_data called"); }
+    // fn load_bank_data(&mut self, data: &[u8]) { info!("load_bank_data called"); }
 
     fn get_info(&self) -> Info {
         Info {
@@ -95,23 +93,22 @@ impl Plugin for SimpleSynth {
             category: Category::Synth,
             inputs: 0,
             outputs: 1,
-            parameters: 4,
+            parameters: 2,
             initial_delay: 0,
             ..Info::default()
         }
     }
 
-    fn process_events(&mut self, events: Vec<Event>) {
-        for event in events {
+    fn process_events(&mut self, events: &Events) {
+        for event in events.events() {
             match event {
-                Event::Midi { data, .. } => self.process_midi_event(data),
-                Event::SysEx { .. } => info!("sysex"),
-                Event::Deprecated { .. } => info!("deprecated"),
+                Event::Midi(ev) => self.process_midi_event(ev.data),
+                _ => (),
             }
         }
     }
 
-    fn process(&mut self, buffer: AudioBuffer<f32>) {
+    fn process(&mut self, buffer: &mut AudioBuffer<f32>) {
         let (_, output_buffer) = buffer.split();
         let mut buffer_size:u64 = 0;
 
@@ -130,22 +127,20 @@ impl Plugin for SimpleSynth {
         self.sample_rate = rate as f64;
     }
 
-    fn get_parameter(&self, index: i32) -> f32 {
+    fn get_parameter(&self, index: i32) -> VSTParam {
         match index {
-//            0 => (self.envelope.attack_time / 1000.0) as f32,
-//            1 => (self.envelope.release_time / 1000.0) as f32,
-            2 => self.attack_ratio,
-            3 => self.release_ratio,
+            0 => self.instrument.envelope.attack as VSTParam,
+            1 => self.instrument.envelope.release as VSTParam,
             _ => 0.0,
         }
     }
 
-    fn set_parameter(&mut self, index: i32, value: f32) {
+    fn set_parameter(&mut self, index: i32, value: VSTParam) {
         match index {
-//            0 => self.envelope.attack_time = (value.max(0.001) * 1000.0) as f64, // avoid pops by always having at least a tiny attack.
-//            1 => self.envelope.release_time = (value.max(0.001) * 1000.0) as f64, // same with release.
-            2 => self.attack_ratio = value.max(0.00001), // same with release.
-            3 => self.release_ratio = value.max(0.00001), // same with release.
+           0 => self.instrument.envelope.attack = (value.max(0.1)) as f64, // avoid pops by always having at least a tiny attack.
+           1 => self.instrument.envelope.release = (value.max(0.1)) as f64, // same with release.
+            // 2 => self.attack_ratio = value.max(0.00001), // same with release.
+            // 3 => self.release_ratio = value.max(0.00001), // same with release.
             _ => (),
         };
     }
@@ -154,18 +149,18 @@ impl Plugin for SimpleSynth {
         match index {
             0 => "Attack".to_string(),
             1 => "Release".to_string(),
-            2 => "Attack Curve".to_string(),
-            3 => "Release Curve".to_string(),
+            // 2 => "Attack Curve".to_string(),
+            // 3 => "Release Curve".to_string(),
             _ => "".to_string(),
         }
     }
 
     fn get_parameter_text(&self, index: i32) -> String {
         match index {
-//            0 => format!("{}ms", (self.envelope.attack_time)),
-//            1 => format!("{}ms", (self.envelope.release_time)),
-            2 => format!("{}", (self.attack_ratio * 1000.0)),
-            3 => format!("{}", (self.release_ratio * 1000.0)),
+            0 => format!("{:.0}ms", self.instrument.envelope.attack * 100.),
+            1 => format!("{:.0}ms", self.instrument.envelope.release * 100.),
+            // 2 => format!("{}", (self.attack_ratio * 1000.0)),
+            // 3 => format!("{}", (self.release_ratio * 1000.0)),
             _ => "".to_string(),
         }
     }

@@ -1,4 +1,57 @@
-//! Recursive ADSR Envelope.
+use VoiceState;
+use Voice;
+use types::*;
+
+pub trait Envelope : Sized {
+    fn ratio(&self, playhead: Playhead, voice: &Voice, sample_rate: f64) -> f64;
+}
+
+/// Simple linear envelope - attack + release only (mainly used to prevent pops)
+pub struct SimpleEnvelope {
+    pub attack: f64, // attack in ms
+    pub release: f64, // release in ms
+}
+
+impl Envelope for SimpleEnvelope {
+
+    /// returns a multiply ratio at a given time
+    fn ratio(&self, playhead: Playhead, voice: &Voice, sample_rate: f64) -> f64 {
+
+        // guard in case envelope is finished
+        // note: convert to std::mem::discriminant when it's stable.
+        match voice.state {
+            VoiceState::Released(release) => {
+                let samples_since_triggered = playhead - release;
+                let time_since_triggered = samples_since_triggered as f64 / sample_rate;
+
+                if time_since_triggered > self.release {
+                    return 0.0
+                }
+            },
+            _ => ()
+        }
+
+        let samples_since_triggered = playhead - voice.started_at;
+        let time_since_triggered = samples_since_triggered as f64 / sample_rate;
+        let attack_ratio = time_since_triggered / self.attack;
+        let release_ratio = match voice.state {
+            VoiceState::Released(release_started_at) => {
+                let samples_since_triggered = playhead - release_started_at;
+                let time_since_triggered = samples_since_triggered as f64 / sample_rate;
+                1.0 - time_since_triggered / self.release
+            },
+            _ => 1.0,
+        };
+
+        attack_ratio * release_ratio
+    }
+}
+
+
+
+
+
+// Recursive ADSR Envelope.
 
 //use std::ops::Neg;
 
