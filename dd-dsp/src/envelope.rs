@@ -43,7 +43,7 @@ impl Envelope for SimpleEnvelope {
             _ => 1.0,
         };
 
-        attack_ratio * release_ratio
+        attack_ratio.min(1.0) * release_ratio.max(0.0)
     }
 }
 

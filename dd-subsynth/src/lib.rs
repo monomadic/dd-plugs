@@ -22,10 +22,17 @@ use dd_dsp::types::*;
 /// Size of VST params.
 type VSTParam = f32;
 
+// struct Preset {
+//     name: String,
+//     attack: VSTParam,
+//     release: VSTParam,
+// }
+
 struct SimpleSynth {
     playhead: Playhead,
     sample_rate: f64,
     instrument: Instrument<SimpleEnvelope>,
+    current_preset: i32,
 }
 
 impl Default for SimpleSynth {
@@ -39,6 +46,7 @@ impl Default for SimpleSynth {
         Self {
             playhead: 0,
             sample_rate: 0.0,
+            current_preset: 0,
             // attack_ratio: 0.75,
             // release_ratio: 0.0001,
             instrument: Instrument {
@@ -60,6 +68,7 @@ impl SimpleSynth {
                 midi::midi_note_to_hz(*note),
                 playhead);
             let envelope_ratio = self.instrument.envelope.ratio(playhead, voice, self.sample_rate);
+            
             output_sample += signal * envelope_ratio;
         }
 
@@ -94,6 +103,7 @@ impl Plugin for SimpleSynth {
             inputs: 0,
             outputs: 1,
             parameters: 2,
+            presets: 2,
             initial_delay: 0,
             ..Info::default()
         }
@@ -137,8 +147,8 @@ impl Plugin for SimpleSynth {
 
     fn set_parameter(&mut self, index: i32, value: VSTParam) {
         match index {
-           0 => self.instrument.envelope.attack = (value.max(0.1)) as f64, // avoid pops by always having at least a tiny attack.
-           1 => self.instrument.envelope.release = (value.max(0.1)) as f64, // same with release.
+           0 => self.instrument.envelope.attack = (value.max(0.01)) as f64, // avoid pops by always having at least a tiny attack.
+           1 => self.instrument.envelope.release = (value.max(0.01)) as f64, // same with release.
             // 2 => self.attack_ratio = value.max(0.00001), // same with release.
             // 3 => self.release_ratio = value.max(0.00001), // same with release.
             _ => (),
@@ -173,6 +183,27 @@ impl Plugin for SimpleSynth {
             3 => "%".to_string(),
             _ => "".to_string(),
         }
+    }
+
+    fn get_preset_name(&self, index: i32) -> String {
+        match index {
+            0 => "Sub Bass".to_string(),
+            1 => "Pad".to_string(),
+            _ => "".to_string(),
+        }
+    }
+
+    // fn set_preset_name(&mut self, name: String) { }
+
+    fn get_preset_num(&self) -> i32 { self.current_preset }
+
+    fn change_preset(&mut self, preset: i32) {
+        self.current_preset = preset;
+        match preset {
+            0 => { self.instrument.envelope.attack = 0.01; self.instrument.envelope.release = 0.05 },
+            1 => { self.instrument.envelope.attack = 0.4; self.instrument.envelope.release = 0.6 },
+            _ => { self.instrument.envelope.attack = 0.0; self.instrument.envelope.release = 0.05 },
+        };
     }
 }
 
