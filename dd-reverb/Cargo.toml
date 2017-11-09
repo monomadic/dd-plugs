@@ -1,13 +1,11 @@
 [package]
-name = "dd_rvc01"
+name = "dd_reverb"
 version = "0.1.0"
 authors = ["Rob Saunders <rob@wearebrandnew.com>"]
 
 [dependencies]
 vst2 = { git = "https://github.com/rust-dsp/rust-vst" }
-lanceverb = { git = "https://github.com/mitchmindtree/lanceverb" }
-dsp-chain = { version = "0.13.1" }
 
 [lib]
-name = "dd_rvc01"
+name = "dd_reverb"
 crate-type = ["cdylib"]

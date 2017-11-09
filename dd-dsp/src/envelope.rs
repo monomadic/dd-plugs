@@ -3,6 +3,7 @@ use Voice;
 use types::*;
 
 pub trait Envelope : Sized {
+    fn expired(&self, playhead: Playhead, release_time: Playhead) -> bool;
     fn ratio(&self, playhead: Playhead, voice: &Voice, sample_rate: f64) -> f64;
 }
 
@@ -14,26 +15,30 @@ pub struct SimpleEnvelope {
 
 impl Envelope for SimpleEnvelope {
 
+    fn expired(&self, playhead: Playhead, release_time: Playhead) -> bool {
+        (playhead - release_time) < ((self.release * 44_100_f64) as u64)
+    }
+
     /// returns a multiply ratio at a given time
     fn ratio(&self, playhead: Playhead, voice: &Voice, sample_rate: f64) -> f64 {
+        let samples_since_triggered = playhead - voice.started_at;
+        let time_since_triggered = samples_since_triggered as f64 / sample_rate;
+        let mut attack_ratio = time_since_triggered / self.attack;
 
-        // guard in case envelope is finished
-        // note: convert to std::mem::discriminant when it's stable.
         match voice.state {
             VoiceState::Released(release) => {
+                // guard in case envelope is finished
+                // note: convert to std::mem::discriminant when it's stable.
                 let samples_since_triggered = playhead - release;
                 let time_since_triggered = samples_since_triggered as f64 / sample_rate;
-
-                if time_since_triggered > self.release {
-                    return 0.0
-                }
+                if time_since_triggered > self.release { return 0.0 }
+            },
+            VoiceState::Retriggered(initial_attack_ratio) => {
+                attack_ratio = initial_attack_ratio + (attack_ratio / initial_attack_ratio);
             },
             _ => ()
         }
 
-        let samples_since_triggered = playhead - voice.started_at;
-        let time_since_triggered = samples_since_triggered as f64 / sample_rate;
-        let attack_ratio = time_since_triggered / self.attack;
         let release_ratio = match voice.state {
             VoiceState::Released(release_started_at) => {
                 let samples_since_triggered = playhead - release_started_at;

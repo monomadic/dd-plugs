@@ -6,6 +6,11 @@
 use vst2::buffer::AudioBuffer;
 use vst2::plugin::{Category, Plugin, Info};
 
+extern crate dsp;
+extern crate lanceverb;
+use lanceverb::Reverb;
+use dsp::{Frame, Node};
+
 const SAMPLE_RATE: f32 = 44100.;
 const PRE_DELAY_TIME: f32 = 100. * (SAMPLE_RATE / 1000.);
 
@@ -27,6 +32,8 @@ struct CombVerb {
     prev_right_tank: f32,
     sample_rate: f32,
 
+    reverb: Reverb,
+
 }
 
 impl Default for CombVerb {
@@ -46,6 +53,7 @@ impl Default for CombVerb {
             prev_left_tank: 0.,
             prev_right_tank: 0.,
             sample_rate: 0.,
+            reverb: Reverb::new(),
         }
     }
 }
@@ -55,12 +63,12 @@ impl Plugin for CombVerb {
         Info {
             name: "CombVerb".to_string(),
             vendor: "DeathDisco".to_string(),
-            unique_id: 11002233,
+            unique_id: 12356677,
             category: Category::Effect,
 
             inputs: 2,
             outputs: 2,
-            parameters: 9,
+            parameters: 1,
 
             ..Info::default()
         }
@@ -118,14 +126,11 @@ impl Plugin for CombVerb {
     }
 
     fn process(&mut self, buffer: &mut AudioBuffer<f32>) {
-
         // Split out the input and output buffers into two vectors
         let (input_buffer, mut output_buffer) = buffer.split();
 
         // Assume 2 channels
-        if input_buffer.len() < 2 || output_buffer.len() < 2 {
-            return;
-        }
+        if input_buffer.len() < 2 || output_buffer.len() < 2 { return; }
 
         // Iterate over inputs as (&f32, &f32)
         let (l, r) = input_buffer.split_at(1);
@@ -135,20 +140,10 @@ impl Plugin for CombVerb {
         let (mut l, mut r) = output_buffer.split_at_mut(1);
         let stereo_out = l[0].iter_mut().zip(r[0].iter_mut());
 
-        // Zip and process
         for ((left_in, right_in), (left_out, right_out)) in stereo_in.zip(stereo_out) {
-
-
-
-            if *left_in >= 0.0 {
-                *left_out = left_in.min(self.bandwidth_freq) / self.bandwidth_freq * self.dampening_freq;
-            }
-            else {
-                *right_out = left_in.max(-self.bandwidth_freq) / self.bandwidth_freq * self.dampening_freq;
-            }
-
-            *left_out = *left_in + *left_out;
-            *right_out = *right_in + *right_out;
+            *left_out = *left_in;
+            *right_out = *right_in;
+            self.reverb.audio_requested(dsp::Frame::new(&mut [left_out]), SAMPLE_RATE as f64);
         }
     }
 }

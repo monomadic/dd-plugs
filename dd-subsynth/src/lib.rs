@@ -50,7 +50,7 @@ impl Default for SimpleSynth {
             // attack_ratio: 0.75,
             // release_ratio: 0.0001,
             instrument: Instrument {
-                voices: HashMap::new(),
+                voices: Vec::new(),
                 envelope: SimpleEnvelope{ attack: 0.2, release: 0.4 }
             },
         }
@@ -59,17 +59,28 @@ impl Default for SimpleSynth {
 
 impl SimpleSynth {
 
-    fn process_sample(&self, playhead: Playhead) -> Sample {
+    fn process_sample(&mut self, playhead: Playhead) -> Sample {
         let mut output_sample = 0.0;
 
-        for (note, voice) in self.instrument.voices.iter() {
+        self.instrument.cleanup(playhead);
+
+        for &(note, ref voice) in self.instrument.voices.iter() {
+
+            let envelope = self.instrument.envelope.ratio(
+                playhead,
+                voice,
+                self.sample_rate
+            );
+
             let signal = oscillator::sine(
                 self.sample_rate,
-                midi::midi_note_to_hz(*note),
-                playhead);
-            let envelope_ratio = self.instrument.envelope.ratio(playhead, voice, self.sample_rate);
+                midi::midi_note_to_hz(note),
+                playhead
+            );
+
+            // self.instrument.voices.remove(note);
             
-            output_sample += signal * envelope_ratio;
+            output_sample += signal * envelope;
         }
 
         (output_sample / 4.0) as Sample
@@ -126,7 +137,8 @@ impl Plugin for SimpleSynth {
             buffer_size = output_channel.len() as u64;
 
             for time in 0..buffer_size {
-                output_channel[time as usize] = self.process_sample(self.playhead + time);
+                let current_playhead = self.playhead + time;
+                output_channel[time as usize] = self.process_sample(current_playhead );
             }
         }
         self.playhead += buffer_size;
@@ -193,11 +205,12 @@ impl Plugin for SimpleSynth {
         }
     }
 
-    // fn set_preset_name(&mut self, name: String) { }
+    fn set_preset_name(&mut self, name: String) { info!("set_preset_name called: {:?}", name); }
 
     fn get_preset_num(&self) -> i32 { self.current_preset }
 
     fn change_preset(&mut self, preset: i32) {
+        info!("change_preset: {:?}", preset);
         self.current_preset = preset;
         match preset {
             0 => { self.instrument.envelope.attack = 0.01; self.instrument.envelope.release = 0.05 },
