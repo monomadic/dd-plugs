@@ -1,5 +1,5 @@
 #[macro_use] 
-extern crate vst2;
+extern crate vst;
 
 #[macro_use] 
 extern crate log;
@@ -8,10 +8,10 @@ extern crate simplelog;
 use simplelog::*;
 use std::fs::File;
 
-use vst2::buffer::AudioBuffer;
-use vst2::plugin::{Category, Plugin, Info};
-use vst2::event::{Event};
-use vst2::api::Events;
+use vst::buffer::AudioBuffer;
+use vst::plugin::{Category, Plugin, Info};
+use vst::event::{Event};
+use vst::api::Events;
 
 use std::collections::HashMap;
 
